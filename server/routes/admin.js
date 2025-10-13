@@ -346,7 +346,7 @@ router.get('/sessions', requireAdmin, async (req, res) => {
 
     params.push(limit); params.push(offset);
 
-    // Prefer direct table join to include visitor source for per-session card logo
+    // Include user profile data (name, email, avatar) for display
     const { rows } = await pool.query(
       `SELECT 
          s.id::text AS session_id,
@@ -358,9 +358,13 @@ router.get('/sessions', requireAdmin, async (req, res) => {
          s.last_seen_at,
          s.ended_at,
          s.page_count,
-         v.source AS visitor_source
+         v.source AS visitor_source,
+         u.name AS user_name,
+         u.email AS user_email,
+         u.avatar_url AS user_avatar
        FROM user_sessions s
        JOIN visitors v ON v.id = s.visitor_id
+       LEFT JOIN users u ON u.id = s.user_id
        ${whereSql}
        ORDER BY s.started_at DESC
        LIMIT $${params.length - 1} OFFSET $${params.length}`,
@@ -383,9 +387,11 @@ router.get('/sessions/:id', requireAdmin, async (req, res) => {
               s.source, s.landing_path, s.user_agent, s.ip,
               s.started_at, s.last_seen_at, s.ended_at, s.page_count,
               v.source AS visitor_source, v.referrer, v.landing_path AS visitor_landing_path,
+              u.name AS user_name, u.email AS user_email, u.avatar_url AS user_avatar,
               (SELECT COUNT(*) FROM session_events e WHERE e.session_id = s.id) AS events_count
          FROM user_sessions s
          JOIN visitors v ON v.id = s.visitor_id
+         LEFT JOIN users u ON u.id = s.user_id
         WHERE s.id::text = $1`,
       [id]
     );

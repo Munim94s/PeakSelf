@@ -294,6 +294,7 @@ export default function AdminSessions() {
                 <select value={filterSource} onChange={(e) => setFilterSource(e.target.value)}>
                   <option value="">All sources</option>
                   <option value="instagram">Instagram</option>
+                  <option value="facebook">Facebook</option>
                   <option value="youtube">YouTube</option>
                   <option value="google">Google</option>
                   <option value="other">Others</option>
@@ -445,9 +446,54 @@ export default function AdminSessions() {
                         <div className="info-label">Visitor ID</div>
                         <div className="info-value info-code">{detail.visitor_id}</div>
                       </div>
-                      <div className="info-item">
-                        <div className="info-label">User ID</div>
-                        <div className="info-value">{detail.user_id || <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>Anonymous</span>}</div>
+                      <div className="info-item full-width">
+                        <div className="info-label">User</div>
+                        <div className="info-value">
+                          {detail.user_id ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                              <img 
+                                src={detail.user_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(detail.user_name || detail.user_email || 'User')}&background=0969da&color=fff&size=40`}
+                                alt={detail.user_name || detail.user_email}
+                                style={{
+                                  width: 40,
+                                  height: 40,
+                                  borderRadius: '50%',
+                                  objectFit: 'cover',
+                                  border: '2px solid #e5e7eb'
+                                }}
+                              />
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: 14, fontWeight: 600, color: '#111', marginBottom: 2 }}>
+                                  {detail.user_name || detail.user_email}
+                                </div>
+                                {detail.user_name && detail.user_email && (
+                                  <div style={{ fontSize: 12, color: '#666' }}>
+                                    {detail.user_email}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                              <div style={{
+                                width: 40,
+                                height: 40,
+                                borderRadius: '50%',
+                                background: '#f3f4f6',
+                                border: '2px solid #e5e7eb',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                  <circle cx="12" cy="7" r="4"/>
+                                </svg>
+                              </div>
+                              <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: 14 }}>Guest User</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                       <div className="info-item">
                         <div className="info-label">Landing Path</div>
