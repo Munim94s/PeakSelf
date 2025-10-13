@@ -28,8 +28,7 @@ ensureTrafficEventsTable();
 // Cookie names and durations
 const COOKIE_VISITOR_ID = 'ps_vid'; // 30 days
 const COOKIE_SESSION_ID = 'ps_sid'; // 30 minutes (sliding)
-const COOKIE_SRC_FIRST = 'ps_src_first'; // 30 days, never overwritten once set
-const COOKIE_SRC_CURR = 'ps_src_curr'; // 30 days, updated on new sessions
+const COOKIE_SRC = 'ps_src'; // 30 days, never overwritten once set
 const THIRTY_DAYS_MS = 1000 * 60 * 60 * 24 * 30;
 const THIRTY_MIN_MS = 1000 * 60 * 30;
 
@@ -47,6 +46,7 @@ function categorize(sourceHint, referrer) {
   const s = (sourceHint || "").toLowerCase();
   const r = (referrer || "").toLowerCase();
   if (s.includes('instagram') || r.includes('instagram.com')) return 'instagram';
+  if (s.includes('facebook') || s.includes('fb') || r.includes('facebook.com') || r.includes('fb.com')) return 'facebook';
   if (s.includes('youtube') || r.includes('youtube.com') || r.includes('youtu.be')) return 'youtube';
   if (s.includes('google') || r.includes('google.')) return 'google';
   return 'other';
@@ -84,12 +84,10 @@ async function verifyUserId(userId) {
 async function ensureVisitor(req, res, source, referrer, landingPath) {
   // Try to use existing visitor cookie if present and valid
   const vidCookie = req.cookies?.[COOKIE_VISITOR_ID];
-  const firstSourceCookie = req.cookies?.[COOKIE_SRC_FIRST];
-  const currentSourceCookie = req.cookies?.[COOKIE_SRC_CURR];
+  const sourceCookie = req.cookies?.[COOKIE_SRC];
   const userId = await verifyUserId(currentUserId(req));
 
-  const firstSource = firstSourceCookie || source || 'other';
-  const now = new Date();
+  const visitorSource = sourceCookie || source || 'other';
 
   if (vidCookie && uuidValidate(vidCookie)) {
     // Look up the visitor in DB
@@ -97,40 +95,37 @@ async function ensureVisitor(req, res, source, referrer, landingPath) {
     let visitor = rows[0] || null;
     if (!visitor) {
       // DB might have been reset; recreate with the same id to keep cookie continuity
-      const q = `INSERT INTO visitors (id, user_id, first_source, current_source, first_referrer, current_referrer, first_landing_path)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7)
+      const q = `INSERT INTO visitors (id, user_id, source, referrer, landing_path)
+                 VALUES ($1, $2, $3, $4, $5)
                  RETURNING *`;
-      const ins = await pool.query(q, [vidCookie, userId, firstSource, source || firstSource, safeStr(referrer, 2048), safeStr(referrer, 2048), safeStr(landingPath, 512)]);
+      const ins = await pool.query(q, [vidCookie, userId, visitorSource, safeStr(referrer, 2048), safeStr(landingPath, 512)]);
       visitor = ins.rows[0];
     } else {
-      // Opportunistically link to user and bump last_seen; never overwrite first_source
+      // Opportunistically link to user and bump last_seen
       const upd = await pool.query(
         `UPDATE visitors
            SET last_seen_at = NOW(),
-               user_id = COALESCE(user_id, $2),
-               current_referrer = COALESCE($3, current_referrer)
+               user_id = COALESCE(user_id, $2)
          WHERE id = $1 RETURNING *`,
-        [visitor.id, userId, safeStr(referrer, 2048)]
+        [visitor.id, userId]
       );
       visitor = upd.rows[0];
     }
     // Ensure cookies are set if missing/expired
-    if (!firstSourceCookie) res.cookie(COOKIE_SRC_FIRST, visitor.first_source, cookieOpts(true));
-    if (!currentSourceCookie && (source || visitor.current_source)) res.cookie(COOKIE_SRC_CURR, source || visitor.current_source, cookieOpts(true));
+    if (!sourceCookie) res.cookie(COOKIE_SRC, visitor.source, cookieOpts(true));
     // Refresh visitor cookie TTL
     res.cookie(COOKIE_VISITOR_ID, visitor.id, cookieOpts(true));
     return visitor;
   }
 
   // No visitor cookie: create a new visitor and set cookies
-  const q = `INSERT INTO visitors (user_id, first_source, current_source, first_referrer, current_referrer, first_landing_path)
-             VALUES ($1, $2, $3, $4, $5, $6)
+  const q = `INSERT INTO visitors (user_id, source, referrer, landing_path)
+             VALUES ($1, $2, $3, $4)
              RETURNING *`;
-  const ins = await pool.query(q, [userId, firstSource, source || firstSource, safeStr(referrer, 2048), safeStr(referrer, 2048), safeStr(landingPath, 512)]);
+  const ins = await pool.query(q, [userId, visitorSource, safeStr(referrer, 2048), safeStr(landingPath, 512)]);
   const visitor = ins.rows[0];
   res.cookie(COOKIE_VISITOR_ID, visitor.id, cookieOpts(true));
-  if (!firstSourceCookie) res.cookie(COOKIE_SRC_FIRST, visitor.first_source, cookieOpts(true));
-  res.cookie(COOKIE_SRC_CURR, visitor.current_source, cookieOpts(true));
+  res.cookie(COOKIE_SRC, visitor.source, cookieOpts(true));
   return visitor;
 }
 
@@ -178,9 +173,9 @@ async function ensureSession(req, res, visitor, source, landingPath, userAgent, 
                first_landing_path = COALESCE(first_landing_path, $3)
          WHERE id = $4`,
         [
-          visitor?.first_source || source || 'other',
-          visitor?.first_referrer || referrer || null,
-          visitor?.first_landing_path || landingPath || null,
+          visitor?.source || source || 'other',
+          visitor?.referrer || referrer || null,
+          visitor?.landing_path || landingPath || null,
           userId
         ]
       );
@@ -203,16 +198,14 @@ async function ensureSession(req, res, visitor, source, landingPath, userAgent, 
     await endStaleSessionIfAny(sidCookie);
   }
 
-  // Start a new session with current source and landing path; session source is immutable per session
+  // Start a new session with source and landing path; session source is immutable per session
   const insert = await pool.query(
     `INSERT INTO user_sessions (visitor_id, user_id, source, landing_path, user_agent, ip)
      VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-    [visitor.id, userId, source || visitor.current_source || visitor.first_source || 'other', safeStr(landingPath, 512), safeStr(userAgent, 512), safeStr(ip, 128)]
+    [visitor.id, userId, source || visitor.source || 'other', safeStr(landingPath, 512), safeStr(userAgent, 512), safeStr(ip, 128)]
   );
   const sid = insert.rows[0].id;
-  // Update current source cookie to reflect this session's source
   res.cookie(COOKIE_SESSION_ID, sid, cookieOpts(false));
-  if (source) res.cookie(COOKIE_SRC_CURR, source, cookieOpts(true));
   return sid;
 }
 
@@ -242,7 +235,7 @@ router.post('/', async (req, res) => {
     );
 
     // Opportunistically sync visitor last_seen_at on any event
-    await pool.query('UPDATE visitors SET last_seen_at = NOW(), current_referrer = COALESCE($2, current_referrer) WHERE id = $1', [visitor.id, referrer]);
+    await pool.query('UPDATE visitors SET last_seen_at = NOW() WHERE id = $1', [visitor.id]);
 
     // Also record a simple traffic event for admin/overview
     try {

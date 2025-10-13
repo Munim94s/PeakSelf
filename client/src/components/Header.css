@@ -100,10 +100,48 @@ header {
   background: transparent;
   font-weight: 600;
   cursor: pointer;
+  color: #000000;
+  text-decoration: none;
+  display: block;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
 .profile-menu-item:hover {
-  background: #f8f8f8;
+  background: #000000;
+  color: #ffffff;
+}
+
+/* Special styling for admin button */
+.profile-menu-item.admin-btn {
+  background: linear-gradient(135deg, #111111 0%, #1f2937 100%);
+  color: #ffffff;
+  font-weight: 700;
+  padding: 0.7rem 1rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px -4px rgba(0,0,0,0.3);
+  position: relative;
+  overflow: hidden;
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+.profile-menu-item.admin-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.profile-menu-item.admin-btn:hover {
+  background: linear-gradient(135deg, #000000 0%, #111111 100%);
+  box-shadow: 0 6px 16px -4px rgba(0,0,0,0.4);
+  transform: translateY(-1px);
+}
+
+.profile-menu-item.admin-btn:hover::before {
+  opacity: 1;
 }
 
 .header-container {
@@ -319,42 +357,270 @@ header {
   height: 1.25rem;
 }
 
-.header-mobile-nav {
-  display: block;
-  border-top: 0;
-  padding: 1rem 0;
+/* Mobile Navigation Backdrop */
+.mobile-nav-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 40;
+  animation: fadeIn 250ms ease-out;
 }
 
-@media (min-width: 768px) {
-  .header-mobile-nav {
-    display: none;
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 
+/* Mobile Navigation Container */
+.header-mobile-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 100vh;
+  background: #ffffff;
+  z-index: 45;
+  overflow-y: auto;
+  animation: slideIn 350ms cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Mobile menu header with close button */
+.mobile-nav-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 2px solid #000000;
+  background: #ffffff;
+  flex-shrink: 0;
+}
+
+.mobile-nav-header-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.mobile-nav-header-logo img {
+  width: 2rem;
+  height: 2rem;
+}
+
+.mobile-nav-header-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #000000;
+  letter-spacing: -0.01em;
+}
+
+.mobile-nav-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  color: #000000;
+  background: #ffffff;
+  border: 2px solid #e5e7eb;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mobile-nav-close-btn:hover {
+  color: #ffffff;
+  background-color: #000000;
+  border-color: #000000;
+  transform: rotate(90deg);
+}
+
+.mobile-nav-close-btn svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .header-mobile-nav,
+  .mobile-nav-backdrop {
+    display: none !important;
+  }
+}
+
+/* Mobile Navigation Links Container */
 .header-mobile-nav-links {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.5rem;
+  padding: 1.5rem;
+  flex: 1;
+  overflow-y: auto;
 }
 
+/* Mobile Navigation Link */
 .header-mobile-nav-link {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   color: #000000;
   text-decoration: none;
   font-weight: 600;
-  font-size: 1rem;
-  letter-spacing: 0.01em;
-  padding: 0.6rem 1rem;
-  border: 1px solid #e5e7eb; /* 1px gray border */
-  border-radius: 9999px;
-  transition: transform 200ms ease, border-color 200ms ease;
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+  padding: 1rem 1.25rem;
+  background: #ffffff;
+  border: 2px solid #f3f4f6;
+  border-radius: 12px;
+  transition: all 220ms cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Animated gradient background on hover */
+.header-mobile-nav-link::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+  opacity: 0;
+  transition: opacity 220ms ease;
+  z-index: -1;
+}
+
+.header-mobile-nav-link:hover::before {
+  opacity: 1;
 }
 
 .header-mobile-nav-link:hover {
-  color: #000000 !important; /* keep text black */
-  background-color: transparent; /* ensure no bg change */
-  border-color: #e5e7eb;
-  transform: translateY(-1px);
+  color: #000000;
+  border-color: #000000;
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px -4px rgba(0, 0, 0, 0.15);
+}
+
+.header-mobile-nav-link:active {
+  transform: translateX(2px) scale(0.98);
+}
+
+/* Active route indicator */
+.header-mobile-nav-link.active {
+  background: #000000;
+  color: #ffffff;
+  border-color: #000000;
+  font-weight: 700;
+}
+
+.header-mobile-nav-link.active::before {
+  opacity: 0;
+}
+
+/* Right arrow icon for navigation items */
+.header-mobile-nav-link::after {
+  content: "→";
+  font-size: 1.25rem;
+  opacity: 0;
+  transform: translateX(-8px);
+  transition: all 220ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.header-mobile-nav-link:hover::after {
+  opacity: 0.6;
+  transform: translateX(0);
+}
+
+.header-mobile-nav-link.active::after {
+  opacity: 1;
+  color: #ffffff;
+}
+
+/* Special styling for logout button */
+.header-mobile-nav-link.logout-btn {
+  margin-top: 0.5rem;
+  background: #ffffff;
+  border-color: #000000;
+  color: #000000;
+  font-weight: 700;
+}
+
+.header-mobile-nav-link.logout-btn::before {
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+}
+
+.header-mobile-nav-link.logout-btn:hover {
+  background: #000000;
+  border-color: #000000;
+  color: #ffffff;
+}
+
+.header-mobile-nav-link.logout-btn:hover::before {
+  opacity: 0;
+}
+
+.header-mobile-nav-link.logout-btn::after {
+  content: "⏻";
+  opacity: 0.6;
+}
+
+/* User info section in mobile menu (when logged in) */
+.mobile-nav-user-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 0.75rem;
+  background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+}
+
+.mobile-nav-user-avatar {
+  flex-shrink: 0;
+}
+
+.mobile-nav-user-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.mobile-nav-user-name {
+  font-weight: 700;
+  font-size: 1rem;
+  color: #000000;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-nav-user-email {
+  font-size: 0.875rem;
+  color: #6b7280;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Divider */
+.mobile-nav-divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent 0%, #e5e7eb 50%, transparent 100%);
+  margin: 1rem 0;
 }

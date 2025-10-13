@@ -33,25 +33,56 @@ setTimeout(() => {
   }
 }, 1000);
 
+// Cleanup expired pending registrations periodically (every hour)
+setInterval(async () => {
+  if (isDatabaseAvailable) {
+    try {
+      const result = await pool.query(
+        "DELETE FROM pending_registrations WHERE expires_at < NOW()"
+      );
+      if (result.rowCount > 0) {
+        console.log(`Cleaned up ${result.rowCount} expired pending registration(s)`);
+      }
+    } catch (e) {
+      console.warn('Failed to cleanup expired pending registrations:', e.message);
+    }
+  }
+}, 1000 * 60 * 60); // Run every hour
+
 // Email transporter (use environment variables)
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: Number(process.env.SMTP_PORT || 587),
-  secure: false,
+  secure: process.env.SMTP_SECURE === 'true' || process.env.SMTP_PORT === '465',
   auth: process.env.SMTP_USER && process.env.SMTP_PASS ? {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   } : undefined,
 });
 
+// Log email configuration status
+if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+  console.log('✅ Email (SMTP) configured:', process.env.SMTP_HOST);
+} else {
+  console.log('📧 Email (SMTP) not configured - verification links will be logged to console');
+  console.log('   💡 To enable emails, set: SMTP_HOST, SMTP_USER, SMTP_PASS in .env');
+}
+
 async function sendVerificationEmail(email, token) {
   const base = process.env.APP_BASE_URL || `http://localhost:${process.env.PORT || 5000}`;
   const url = `${base}/api/auth/verify-email?token=${encodeURIComponent(token)}`;
-  // If SMTP not configured, log link so dev can proceed
-  if (!process.env.SMTP_HOST) {
-    console.log(`[DEV] Verification link for ${email}: ${url}`);
+  
+  // If SMTP not configured, log link to console for development
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    console.log('\n' + '='.repeat(80));
+    console.log('📧 [DEV MODE] Email verification link:');
+    console.log('   Email: ' + email);
+    console.log('   Link:  ' + url);
+    console.log('='.repeat(80) + '\n');
     return;
   }
+  
+  // Try to send email via SMTP
   try {
     await transporter.sendMail({
       from: process.env.EMAIL_FROM || "no-reply@peakself.local",
@@ -59,9 +90,16 @@ async function sendVerificationEmail(email, token) {
       subject: "Verify your PeakSelf account",
       html: `<p>Click to verify your email:</p><p><a href="${url}">${url}</a></p>`
     });
+    console.log(`✅ Verification email sent to ${email}`);
   } catch (e) {
-    // Do not block registration on email failures in dev or misconfigured SMTP
-    console.warn('Email send failed (continuing):', e.message);
+    // Log detailed error but don't block registration
+    console.error('❌ Email send failed:', e.message);
+    console.log('\n' + '='.repeat(80));
+    console.log('📧 [FALLBACK] Verification link (email failed to send):');
+    console.log('   Email: ' + email);
+    console.log('   Link:  ' + url);
+    console.log('   Error: ' + e.message);
+    console.log('='.repeat(80) + '\n');
   }
 }
 
@@ -192,7 +230,7 @@ function verifyJwtFromRequest(req) {
   }
 }
 
-// Local register (accepts name; can merge a Google-only account by setting a local password)
+// Local register (NEW FLOW: stores in pending_registrations until email verified)
 router.post("/register", authPasswordLimiter, async (req, res) => {
   if (!checkDatabaseAvailability(res)) return;
   
@@ -201,45 +239,46 @@ router.post("/register", authPasswordLimiter, async (req, res) => {
     if (!email || !password) return res.status(400).json({ error: "Email and password are required" });
     const lower = String(email).toLowerCase();
     const safeName = typeof name === 'string' && name.trim() ? name.trim() : null;
+    
+    // Check if user already exists in users table
     const { rows } = await pool.query("SELECT * FROM users WHERE email = $1", [lower]);
     const existing = rows[0];
+    
     if (existing) {
-      if (existing.provider === 'google') {
-        // Merge: keep google_id; set password_hash; flip provider to local to allow both login methods
-        const hash = await bcrypt.hash(password, 10);
-const updated = await pool.query(
-          "UPDATE users SET password_hash = $1, provider = 'local', name = COALESCE($2, name), updated_at = NOW() WHERE id = $3 RETURNING id, email, provider, verified, name, avatar_url, role",
-          [hash, safeName, existing.id]
-        );
-        const merged = updated.rows[0];
-        const token = signJwt(merged);
-        setJwtCookie(res, token);
-        return req.login({ id: merged.id }, (err) => {
-          if (err) return res.status(200).json({ message: "Password set. You are now logged in.", user: merged });
-          return req.session.save(() => res.status(200).json({ message: "Password set. You are now logged in.", user: merged }));
-        });
+      // If user exists with local provider (already has password), reject registration
+      if (existing.provider === 'local') {
+        return res.status(400).json({ error: "An account with this email already exists. Please login instead." });
       }
-      return res.status(400).json({ error: "User already exists" });
+      
+      // If user exists with Google OAuth, allow them to add password via email verification
+      // This is secure because they need to verify email ownership
+      // We'll handle the merge after email verification
     }
+    
+    // Check if there's already a pending registration for this email
+    const pendingCheck = await pool.query("SELECT * FROM pending_registrations WHERE LOWER(email) = $1", [lower]);
+    if (pendingCheck.rows[0]) {
+      // Delete old pending registration and create a new one with fresh token
+      await pool.query("DELETE FROM pending_registrations WHERE LOWER(email) = $1", [lower]);
+    }
+    
+    // Hash password and create pending registration
     const hash = await bcrypt.hash(password, 10);
-const insert = await pool.query(
-      "INSERT INTO users (email, password_hash, provider, verified, name) VALUES ($1, $2, 'local', FALSE, $3) RETURNING *",
-      [lower, hash, safeName]
-    );
-    const user = insert.rows[0];
     const token = uuidv4();
-    const expires = new Date(Date.now() + 1000 * 60 * 60 * 24);
+    const expires = new Date(Date.now() + 1000 * 60 * 60 * 24); // 24 hours
+    
     await pool.query(
-      "INSERT INTO email_verification_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)",
-      [user.id, token, expires]
+      "INSERT INTO pending_registrations (email, password_hash, name, token, expires_at) VALUES ($1, $2, $3, $4, $5)",
+      [lower, hash, safeName, token, expires]
     );
+    
+    // Send verification email
     await sendVerificationEmail(lower, token);
-const jwtToken = signJwt(user);
-    setJwtCookie(res, jwtToken);
-    return req.login({ id: user.id }, (err) => {
-      if (err) return res.status(201).json({ message: "Registered. Please verify your email.", user: { id: user.id, email: user.email, provider: user.provider, verified: user.verified, name: user.name, avatar_url: user.avatar_url, role: user.role } });
-      // Ensure the session is saved before responding
-      return req.session.save(() => res.status(201).json({ message: "Registered and logged in. Check your email to verify.", user: { id: user.id, email: user.email, provider: user.provider, verified: user.verified, name: user.name, avatar_url: user.avatar_url, role: user.role } }));
+    
+    // Return success without logging in or creating user yet
+    return res.status(201).json({ 
+      message: "Registration initiated. Please check your email to verify your account before logging in.",
+      email: lower
     });
   } catch (e) {
     console.error('Registration error:', e);
@@ -254,7 +293,17 @@ router.post("/login", authPasswordLimiter, async (req, res) => {
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ error: "Email and password are required" });
     const lower = String(email).toLowerCase();
-const { rows } = await pool.query("SELECT * FROM users WHERE email = $1", [lower]);
+    
+    // First check if there's a pending registration for this email
+    const pendingCheck = await pool.query(
+      "SELECT * FROM pending_registrations WHERE LOWER(email) = $1 AND expires_at > NOW()",
+      [lower]
+    );
+    if (pendingCheck.rows[0]) {
+      return res.status(400).json({ error: "Please verify your email first. Check your inbox for the verification link." });
+    }
+    
+    const { rows } = await pool.query("SELECT * FROM users WHERE email = $1", [lower]);
     const user = rows[0];
     const blockReason = ensureLocalAllowed(user);
     if (blockReason) return res.status(400).json({ error: blockReason });
@@ -338,17 +387,94 @@ router.get("/google/failure", authGeneralLimiter, (req, res) => {
   res.status(401).json({ error: "Google authentication failed" });
 });
 
-// Verify email
+// Verify email (handles both pending registrations and existing user verification)
 router.get("/verify-email", authGeneralLimiter, async (req, res) => {
   try {
     const token = String(req.query.token || "");
     if (!token) return res.status(400).json({ error: "Missing token" });
-    const { rows } = await pool.query("SELECT * FROM email_verification_tokens WHERE token = $1 AND consumed_at IS NULL AND expires_at > NOW()", [token]);
+    
+    // First, check if this is a pending registration (NEW FLOW)
+    const pendingResult = await pool.query(
+      "SELECT * FROM pending_registrations WHERE token = $1 AND expires_at > NOW()",
+      [token]
+    );
+    
+    if (pendingResult.rows[0]) {
+      const pending = pendingResult.rows[0];
+      
+      // Check if user with this email already exists
+      const existingUser = await pool.query("SELECT * FROM users WHERE LOWER(email) = $1", [pending.email.toLowerCase()]);
+      const existing = existingUser.rows[0];
+      
+      let user;
+      
+      if (existing) {
+        // If user exists with Google OAuth, merge accounts by adding password
+        if (existing.provider === 'google') {
+          // Update existing Google user: add password, switch to local provider, keep google_id
+          const updated = await pool.query(
+            "UPDATE users SET password_hash = $1, provider = 'local', verified = TRUE, name = COALESCE($2, name), updated_at = NOW() WHERE id = $3 RETURNING id, email, provider, verified, name, avatar_url, role",
+            [pending.password_hash, pending.name, existing.id]
+          );
+          user = updated.rows[0];
+          console.log(`Google OAuth account merged with local password: ${user.email}`);
+        } else {
+          // User exists with local provider - this shouldn't happen but handle it
+          await pool.query("DELETE FROM pending_registrations WHERE id = $1", [pending.id]);
+          return res.status(400).json({ error: "User already exists. Please login instead." });
+        }
+      } else {
+        // Create new user with verified = TRUE
+        const newUser = await pool.query(
+          "INSERT INTO users (email, password_hash, provider, verified, name) VALUES ($1, $2, 'local', TRUE, $3) RETURNING id, email, provider, verified, name, avatar_url, role",
+          [pending.email.toLowerCase(), pending.password_hash, pending.name]
+        );
+        user = newUser.rows[0];
+        console.log(`New user created after email verification: ${user.email}`);
+      }
+      
+      // Delete the pending registration
+      await pool.query("DELETE FROM pending_registrations WHERE id = $1", [pending.id]);
+      
+      // Auto-login: create JWT and set cookie
+      const token = signJwt(user);
+      setJwtCookie(res, token);
+      
+      // Redirect to homepage instead of login page
+      const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+      return res.redirect(`${clientUrl}?verified=true`);
+    }
+    
+    // Otherwise, check old flow (existing users verifying email)
+    const { rows } = await pool.query(
+      "SELECT * FROM email_verification_tokens WHERE token = $1 AND consumed_at IS NULL AND expires_at > NOW()",
+      [token]
+    );
     const rec = rows[0];
-    if (!rec) return res.status(400).json({ error: "Invalid or expired token" });
+    
+    if (!rec) {
+      return res.status(400).json({ error: "Invalid or expired token" });
+    }
+    
+    // Update existing user verification status (OLD FLOW)
     await pool.query("UPDATE users SET verified = TRUE, updated_at = NOW() WHERE id::text = $1", [rec.user_id]);
     await pool.query("UPDATE email_verification_tokens SET consumed_at = NOW() WHERE id = $1", [rec.id]);
-    res.json({ message: "Email verified" });
+    
+    // Fetch the user to auto-login
+    const userResult = await pool.query(
+      "SELECT id, email, provider, verified, name, avatar_url, role FROM users WHERE id::text = $1",
+      [rec.user_id]
+    );
+    const user = userResult.rows[0];
+    
+    if (user) {
+      // Auto-login: create JWT and set cookie
+      const token = signJwt(user);
+      setJwtCookie(res, token);
+    }
+    
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+    return res.redirect(`${clientUrl}?verified=true`);
   } catch (e) {
     console.error('Email verification error:', e);
     const msg = process.env.NODE_ENV === 'production' ? 'Verification failed' : `Verification failed: ${e.message}`;

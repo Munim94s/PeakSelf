@@ -41,7 +41,8 @@ export default function Login() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Login failed');
-      setMsg('Logged in');
+      // Redirect to home page after successful login
+      navigate('/');
     } catch (err) {
       setMsg(err.message);
     }

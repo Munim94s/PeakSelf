@@ -77,6 +77,12 @@ const logos = {
       <circle cx="17" cy="7" r="1.3" fill="#fff"/>
     </svg>
   ),
+  facebook: (
+    <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden>
+      <rect x="2" y="2" width="20" height="20" rx="2" fill="#1877f2"/>
+      <path d="M16 8h-2c-.5 0-1 .5-1 1v2h3l-.5 3h-2.5v7h-3v-7H8v-3h2V9c0-2 1.5-4 4-4h2v3z" fill="#fff"/>
+    </svg>
+  ),
   youtube: (
     <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden>
       <rect x="2" y="6" width="20" height="12" rx="3" fill="#ff0000"/>
@@ -127,7 +133,7 @@ function Card({ title, value, accent, icon, delay = 0 }) {
         {icon}
       </div>
       <div style={{flex: 1}}>
-        <div style={{fontSize: 12, color: '#666', fontWeight: 700}}>{title}</div>
+        <div style={{fontSize: 12, color: '#666', fontWeight: 500}}>{title}</div>
         <div style={{
           fontSize: 20, 
           fontWeight: 900, 
@@ -260,6 +266,7 @@ async function loadEvents(nextPage = 0) {
       console.log('No traffic summary available, returning zero counts');
       return [
         { key: 'instagram', title: 'Instagram', value: 0, color: 'linear-gradient(135deg,#f58529,#dd2a7b,#8134af)', icon: logos.instagram },
+        { key: 'facebook', title: 'Facebook', value: 0, color: '#1877f2', icon: logos.facebook },
         { key: 'youtube', title: 'YouTube', value: 0, color: '#ff0000', icon: logos.youtube },
         { key: 'google', title: 'Google', value: 0, color: '#f1f3f4', icon: logos.google },
         { key: 'other', title: 'Others', value: 0, color: '#111', icon: logos.other },
@@ -267,17 +274,19 @@ async function loadEvents(nextPage = 0) {
     }
     
     const instagramCount = trafficSummary.traffic_instagram || 0;
+    const facebookCount = trafficSummary.traffic_facebook || 0;
     const youtubeCount = trafficSummary.traffic_youtube || 0;
     const googleCount = trafficSummary.traffic_google || 0;
     const otherCount = trafficSummary.traffic_others || 0;
     
     const cardsData = [
       { key: 'instagram', title: 'Instagram', value: instagramCount, color: 'linear-gradient(135deg,#f58529,#dd2a7b,#8134af)', icon: logos.instagram },
+      { key: 'facebook', title: 'Facebook', value: facebookCount, color: '#1877f2', icon: logos.facebook },
       { key: 'youtube', title: 'YouTube', value: youtubeCount, color: '#ff0000', icon: logos.youtube },
       { key: 'google', title: 'Google', value: googleCount, color: '#f1f3f4', icon: logos.google },
       { key: 'other', title: 'Others', value: otherCount, color: '#111', icon: logos.other },
     ];
-    console.log('REAL traffic counts from database:', { instagram: instagramCount, youtube: youtubeCount, google: googleCount, other: otherCount });
+    console.log('REAL traffic counts from database:', { instagram: instagramCount, facebook: facebookCount, youtube: youtubeCount, google: googleCount, other: otherCount });
     return cardsData;
   }, [trafficSummary]);
 

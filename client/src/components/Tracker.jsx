@@ -6,6 +6,7 @@ const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
 export default function Tracker() {
   const location = useLocation();
   const lastPathRef = useRef(null);
+  const sourceRef = useRef(null);
 
   useEffect(() => {
     try {
@@ -19,14 +20,33 @@ export default function Tracker() {
       const isFirstRouteHit = prevPath == null;
       const refToSend = isFirstRouteHit ? (document.referrer || null) : window.location.origin;
 
+      // Extract source from URL query parameters (?src=instagram, ?src=youtube, etc.)
+      // Only capture on first hit to preserve the original traffic source
+      let sourceHint = sourceRef.current;
+      if (isFirstRouteHit) {
+        const params = new URLSearchParams(window.location.search);
+        const srcParam = params.get('src') || params.get('source') || params.get('utm_source');
+        if (srcParam) {
+          sourceHint = srcParam;
+          sourceRef.current = srcParam; // Save for subsequent navigations
+        }
+      }
+
+      const trackingData = {
+        referrer: refToSend,
+        path: location.pathname
+      };
+      
+      // Only include source if we have one
+      if (sourceHint) {
+        trackingData.source = sourceHint;
+      }
+
       fetch(`${API_BASE}/api/track`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
-          referrer: refToSend,
-          path: location.pathname
-        })
+        body: JSON.stringify(trackingData)
       }).catch(() => {});
     } catch (_) {}
   }, [location.pathname]);

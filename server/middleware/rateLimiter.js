@@ -34,14 +34,14 @@ const oauthRateLimitHandler = (req, res) => {
 
 /**
  * Strict rate limiter for password-based authentication (login/register)
- * Prevents brute force attacks on login/register
+ * Prevents brute force attacks and spam registrations
  * 
- * Limits: 5 requests per 15 minutes per IP
+ * Limits: 5 requests per 30 minutes per IP
  */
 export const authPasswordLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 30 * 60 * 1000, // 30 minutes
   max: 5, // 5 requests per window
-  message: 'Too many authentication attempts from this IP, please try again after 15 minutes',
+  message: 'Too many authentication attempts from this IP, please try again after 30 minutes',
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
   handler: rateLimitHandler,
@@ -68,12 +68,12 @@ export const authOAuthLimiter = rateLimit({
 /**
  * General auth limiter for other auth endpoints (logout, verify, etc.)
  * 
- * Limits: 15 requests per 15 minutes per IP
+ * Limits: 15 requests per 30 minutes per IP
  */
 export const authGeneralLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 30 * 60 * 1000, // 30 minutes
   max: 15, // 15 requests per window
-  message: 'Too many authentication requests from this IP, please try again after 15 minutes',
+  message: 'Too many authentication requests from this IP, please try again after 30 minutes',
   standardHeaders: true,
   legacyHeaders: false,
   handler: rateLimitHandler,
@@ -164,9 +164,9 @@ export const globalLimiter = rateLimit({
 console.log('✅ Rate limiters initialized');
 console.log('   DEBUG: ENABLE_RATE_LIMIT =', process.env.ENABLE_RATE_LIMIT);
 if (process.env.ENABLE_RATE_LIMIT === 'true') {
-  console.log('   Auth (password): 5 requests per 15 minutes');
+  console.log('   Auth (password/register): 5 requests per 30 minutes');
   console.log('   Auth (OAuth): 5 requests per 15 minutes');
-  console.log('   Auth (general): 15 requests per 15 minutes');
+  console.log('   Auth (general): 15 requests per 30 minutes');
   console.log('   Subscribe endpoint: 3 requests per 15 minutes');
   console.log('   Admin endpoints: 30 requests per 15 minutes');
   console.log('   Tracking endpoints: 500 requests per 15 minutes');

@@ -9,7 +9,7 @@ const router = express.Router();
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: Number(process.env.SMTP_PORT || 587),
-  secure: false,
+  secure: process.env.SMTP_SECURE === 'true' || process.env.SMTP_PORT === '465',
   auth: process.env.SMTP_USER && process.env.SMTP_PASS ? {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
@@ -142,7 +142,7 @@ router.get('/traffic/summary', requireAdmin, async (req, res) => {
       `SELECT snapshot_at,
               total_users, verified_users, signups_24h,
               newsletter_total, newsletter_signups_24h,
-              traffic_instagram, traffic_youtube, traffic_google, traffic_others, traffic_others_refs
+              traffic_instagram, traffic_facebook, traffic_youtube, traffic_google, traffic_others, traffic_others_refs
        FROM dashboard_overview_latest`
     );
     if (snap.rows[0]) return res.json({ source: 'snapshot', ...snap.rows[0] });
@@ -166,6 +166,7 @@ router.get('/traffic/summary', requireAdmin, async (req, res) => {
         tr AS (
           SELECT
             COALESCE(SUM(CASE WHEN source = 'instagram' THEN 1 ELSE 0 END),0)::BIGINT AS traffic_instagram,
+            COALESCE(SUM(CASE WHEN source = 'facebook' THEN 1 ELSE 0 END),0)::BIGINT AS traffic_facebook,
             COALESCE(SUM(CASE WHEN source = 'youtube' THEN 1 ELSE 0 END),0)::BIGINT AS traffic_youtube,
             COALESCE(SUM(CASE WHEN source = 'google' THEN 1 ELSE 0 END),0)::BIGINT AS traffic_google,
             COALESCE(SUM(CASE WHEN source = 'other' THEN 1 ELSE 0 END),0)::BIGINT AS traffic_others
@@ -185,7 +186,7 @@ router.get('/traffic/summary', requireAdmin, async (req, res) => {
         )
       SELECT u.total_users, u.verified_users, u.signups_24h,
              n.newsletter_total, n.newsletter_signups_24h,
-             tr.traffic_instagram, tr.traffic_youtube, tr.traffic_google, tr.traffic_others,
+             tr.traffic_instagram, tr.traffic_facebook, tr.traffic_youtube, tr.traffic_google, tr.traffic_others,
              otr.traffic_others_refs`);
 
     return res.json({ source: 'live', range: norm.label, snapshot_at: new Date().toISOString(), ...live.rows[0] });
@@ -217,6 +218,7 @@ router.get('/traffic/summary/test', async (req, res) => {
         tr AS (
           SELECT
             COALESCE(SUM(CASE WHEN source = 'instagram' THEN 1 ELSE 0 END),0)::BIGINT AS traffic_instagram,
+            COALESCE(SUM(CASE WHEN source = 'facebook' THEN 1 ELSE 0 END),0)::BIGINT AS traffic_facebook,
             COALESCE(SUM(CASE WHEN source = 'youtube' THEN 1 ELSE 0 END),0)::BIGINT AS traffic_youtube,
             COALESCE(SUM(CASE WHEN source = 'google' THEN 1 ELSE 0 END),0)::BIGINT AS traffic_google,
             COALESCE(SUM(CASE WHEN source = 'other' THEN 1 ELSE 0 END),0)::BIGINT AS traffic_others
@@ -236,7 +238,7 @@ router.get('/traffic/summary/test', async (req, res) => {
         )
       SELECT u.total_users, u.verified_users, u.signups_24h,
              n.newsletter_total, n.newsletter_signups_24h,
-             tr.traffic_instagram, tr.traffic_youtube, tr.traffic_google, tr.traffic_others,
+             tr.traffic_instagram, tr.traffic_facebook, tr.traffic_youtube, tr.traffic_google, tr.traffic_others,
              otr.traffic_others_refs`);
 
     return res.json({ source: 'live', range: norm.label, snapshot_at: new Date().toISOString(), ...live.rows[0] });
@@ -266,7 +268,7 @@ router.get('/traffic/events', requireAdmin, async (req, res) => {
       wheres.push("occurred_at >= NOW() - ($1 || ' days')::interval");
     }
 
-    const allowed = new Set(['instagram','youtube','google','other']);
+    const allowed = new Set(['instagram','facebook','youtube','google','other']);
     if (allowed.has(source)) {
       params.push(source);
       wheres.push(`source = $${params.length}`);
@@ -288,6 +290,7 @@ router.get('/traffic/events', requireAdmin, async (req, res) => {
     const countsQuery = `
       SELECT 
         COALESCE(SUM(CASE WHEN source = 'instagram' THEN 1 ELSE 0 END), 0) AS traffic_instagram,
+        COALESCE(SUM(CASE WHEN source = 'facebook' THEN 1 ELSE 0 END), 0) AS traffic_facebook,
         COALESCE(SUM(CASE WHEN source = 'youtube' THEN 1 ELSE 0 END), 0) AS traffic_youtube,
         COALESCE(SUM(CASE WHEN source = 'google' THEN 1 ELSE 0 END), 0) AS traffic_google,
         COALESCE(SUM(CASE WHEN source = 'other' THEN 1 ELSE 0 END), 0) AS traffic_others
@@ -313,6 +316,7 @@ router.get('/traffic/events', requireAdmin, async (req, res) => {
       events: rows,
       summary: {
         traffic_instagram: parseInt(counts.traffic_instagram),
+        traffic_facebook: parseInt(counts.traffic_facebook),
         traffic_youtube: parseInt(counts.traffic_youtube), 
         traffic_google: parseInt(counts.traffic_google),
         traffic_others: parseInt(counts.traffic_others)
@@ -342,7 +346,7 @@ router.get('/sessions', requireAdmin, async (req, res) => {
 
     params.push(limit); params.push(offset);
 
-    // Prefer direct table join to include visitor first_source for per-session card logo
+    // Prefer direct table join to include visitor source for per-session card logo
     const { rows } = await pool.query(
       `SELECT 
          s.id::text AS session_id,
@@ -354,7 +358,7 @@ router.get('/sessions', requireAdmin, async (req, res) => {
          s.last_seen_at,
          s.ended_at,
          s.page_count,
-         v.first_source
+         v.source AS visitor_source
        FROM user_sessions s
        JOIN visitors v ON v.id = s.visitor_id
        ${whereSql}
@@ -378,7 +382,7 @@ router.get('/sessions/:id', requireAdmin, async (req, res) => {
       `SELECT s.id::text AS id, s.visitor_id::text AS visitor_id, s.user_id::text AS user_id,
               s.source, s.landing_path, s.user_agent, s.ip,
               s.started_at, s.last_seen_at, s.ended_at, s.page_count,
-              v.first_source, v.current_source, v.first_referrer, v.current_referrer, v.first_landing_path,
+              v.source AS visitor_source, v.referrer, v.landing_path AS visitor_landing_path,
               (SELECT COUNT(*) FROM session_events e WHERE e.session_id = s.id) AS events_count
          FROM user_sessions s
          JOIN visitors v ON v.id = s.visitor_id
@@ -416,7 +420,7 @@ router.get('/dashboard', requireAdmin, async (req, res) => {
       `SELECT snapshot_at,
               total_users, verified_users, signups_24h,
               newsletter_total, newsletter_signups_24h,
-              traffic_instagram, traffic_youtube, traffic_google, traffic_others, traffic_others_refs
+              traffic_instagram, traffic_facebook, traffic_youtube, traffic_google, traffic_others, traffic_others_refs
        FROM dashboard_overview_latest`
     );
     if (snap.rows[0]) {
@@ -440,6 +444,7 @@ router.get('/dashboard', requireAdmin, async (req, res) => {
         tr AS (
           SELECT
             COALESCE(SUM(CASE WHEN source = 'instagram' THEN 1 ELSE 0 END),0)::BIGINT AS traffic_instagram,
+            COALESCE(SUM(CASE WHEN source = 'facebook' THEN 1 ELSE 0 END),0)::BIGINT AS traffic_facebook,
             COALESCE(SUM(CASE WHEN source = 'youtube' THEN 1 ELSE 0 END),0)::BIGINT AS traffic_youtube,
             COALESCE(SUM(CASE WHEN source = 'google' THEN 1 ELSE 0 END),0)::BIGINT AS traffic_google,
             COALESCE(SUM(CASE WHEN source = 'other' THEN 1 ELSE 0 END),0)::BIGINT AS traffic_others
@@ -459,7 +464,7 @@ router.get('/dashboard', requireAdmin, async (req, res) => {
         )
       SELECT u.total_users, u.verified_users, u.signups_24h,
              n.newsletter_total, n.newsletter_signups_24h,
-             tr.traffic_instagram, tr.traffic_youtube, tr.traffic_google, tr.traffic_others,
+             tr.traffic_instagram, tr.traffic_facebook, tr.traffic_youtube, tr.traffic_google, tr.traffic_others,
              otr.traffic_others_refs`);
 
     return res.json({ source: 'live', snapshot_at: new Date().toISOString(), ...live.rows[0] });

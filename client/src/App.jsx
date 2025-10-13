@@ -9,6 +9,7 @@ import About from './pages/About';
 import Contact from './pages/Contact';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import CheckEmail from './pages/CheckEmail';
 import Admin from './pages/Admin';
 import NotAccessible from './pages/NotAccessible';
 import RateLimit from './pages/RateLimit';
@@ -31,6 +32,7 @@ function App() {
           <Route path="/contact" element={<Contact />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/check-email" element={<CheckEmail />} />
           <Route path="/rate-limit" element={<RateLimit />} />
           <Route path="/admin/*" element={<Admin />} />
           <Route path="/not-accessible" element={<NotAccessible />} />

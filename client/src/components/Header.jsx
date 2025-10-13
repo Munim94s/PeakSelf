@@ -45,6 +45,23 @@ const Header = () => {
     setIsMenuOpen(!isMenuOpen);
   };
 
+  // Close menu when route changes
+  useEffect(() => {
+    setIsMenuOpen(false);
+  }, [location.pathname]);
+
+  // Prevent body scroll when menu is open
+  useEffect(() => {
+    if (isMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMenuOpen]);
+
   useEffect(() => {
     function onDocClick(e) {
       if (!userMenuOpen) return;
@@ -169,7 +186,7 @@ const Header = () => {
                     </div>
                     <div className="profile-menu-sep" />
                     {user?.role === 'admin' && (
-                      <a href="/admin" className="profile-menu-item">Admin</a>
+                      <a href="/admin" className="profile-menu-item admin-btn">Admin Dashboard</a>
                     )}
                     <button className="profile-menu-item" onClick={logout}>Logout</button>
                   </div>
@@ -190,63 +207,115 @@ const Header = () => {
           </div>
         </div>
 
+        {/* Mobile Navigation Backdrop */}
+        {isMenuOpen && (
+          <div 
+            className="mobile-nav-backdrop" 
+            onClick={() => setIsMenuOpen(false)}
+          />
+        )}
+
         {/* Mobile Navigation */}
         {isMenuOpen && (
           <div className="header-mobile-nav">
+            {/* Mobile Menu Header */}
+            <div className="mobile-nav-header">
+              <div className="mobile-nav-header-logo">
+                <img src="/logo-p.svg" alt="PeakSelf Logo" />
+                <span className="mobile-nav-header-title">PEAKSELF</span>
+              </div>
+              <button 
+                className="mobile-nav-close-btn"
+                onClick={() => setIsMenuOpen(false)}
+                aria-label="Close menu"
+              >
+                <X />
+              </button>
+            </div>
+
             <nav className="header-mobile-nav-links">
+              {/* User Info Section (if logged in) */}
+              {user && (
+                <div className="mobile-nav-user-info">
+                  <div className="mobile-nav-user-avatar">
+                    <Avatar />
+                  </div>
+                  <div className="mobile-nav-user-details">
+                    <div className="mobile-nav-user-name">{user.name || 'User'}</div>
+                    <div className="mobile-nav-user-email">{user.email}</div>
+                  </div>
+                </div>
+              )}
+
+              {/* Navigation Links */}
               <Link 
                 to="/" 
-                className="header-mobile-nav-link"
-                onClick={() => setIsMenuOpen(false)}
+                className={`header-mobile-nav-link ${location.pathname === '/' ? 'active' : ''}`}
               >
                 Home
               </Link>
               <Link 
                 to="/blog" 
-                className="header-mobile-nav-link"
-                onClick={() => setIsMenuOpen(false)}
+                className={`header-mobile-nav-link ${location.pathname === '/blog' ? 'active' : ''}`}
               >
                 Blog
               </Link>
               <Link 
                 to="/about" 
-                className="header-mobile-nav-link"
-                onClick={() => setIsMenuOpen(false)}
+                className={`header-mobile-nav-link ${location.pathname === '/about' ? 'active' : ''}`}
               >
                 About
               </Link>
               <Link 
                 to="/contact" 
-                className="header-mobile-nav-link"
-                onClick={() => setIsMenuOpen(false)}
+                className={`header-mobile-nav-link ${location.pathname === '/contact' ? 'active' : ''}`}
               >
                 Contact
               </Link>
+
+              {/* Auth Links */}
               {!user && (
-                <Link 
-                  to="/login" 
-                  className="header-mobile-nav-link"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Login
-                </Link>
+                <>
+                  <div className="mobile-nav-divider" />
+                  <Link 
+                    to="/login" 
+                    className={`header-mobile-nav-link ${location.pathname === '/login' ? 'active' : ''}`}
+                  >
+                    Login
+                  </Link>
+                  <Link 
+                    to="/register" 
+                    className={`header-mobile-nav-link ${location.pathname === '/register' ? 'active' : ''}`}
+                  >
+                    Sign up
+                  </Link>
+                </>
               )}
+
+              {/* Admin Link */}
               {user && user.role === 'admin' && (
-                <a 
-                  href="/admin" 
-                  className="header-mobile-nav-link"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Admin
-                </a>
+                <>
+                  <div className="mobile-nav-divider" />
+                  <a 
+                    href="/admin" 
+                    className="header-mobile-nav-link"
+                  >
+                    Admin Dashboard
+                  </a>
+                </>
               )}
+
+              {/* Logout Button */}
               {user && (
-                <button 
-                  onClick={() => { setIsMenuOpen(false); logout(); }} 
-                  className="header-mobile-nav-link logout-btn"
-                >
-                  Logout
-                </button>
+                <>
+                  <div className="mobile-nav-divider" />
+                  <button 
+                    onClick={logout} 
+                    className="header-mobile-nav-link logout-btn"
+                  >
+                    Logout
+                  </button>
+                </>
               )}
             </nav>
           </div>

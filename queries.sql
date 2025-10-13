@@ -1,5 +1,21 @@
--- Database schema for PeakSelf authentication
+-- Database schema for PeakSelf
 -- Target: PostgreSQL
+-- 
+-- IMPORTANT: This schema includes a new email verification system where users are
+-- NOT added to the users table until they verify their email address.
+-- 
+-- Key Tables:
+-- - users: Verified users (all users have verified=TRUE in new flow)
+-- - pending_registrations: Temporary storage for unverified registrations
+-- - email_verification_tokens: Legacy tokens for existing users
+-- 
+-- Registration Flow:
+-- 1. User registers → entry created in pending_registrations
+-- 2. Verification email sent with unique token (24h expiration)
+-- 3. User clicks link → user created in users table with verified=TRUE
+-- 4. Automatic cleanup removes expired pending registrations every hour
+-- 
+-- See authentication rules section below for complete documentation.
 
 -- SAFETY: Abort if the database is not empty (any table already exists in public schema)
 DO $$
@@ -74,6 +90,24 @@ CREATE TABLE IF NOT EXISTS email_verification_tokens (
 CREATE INDEX IF NOT EXISTS idx_email_verification_active
   ON email_verification_tokens(user_id, expires_at)
   WHERE consumed_at IS NULL;
+
+-- Pending registrations (stores registration data before email verification)
+-- Users are only added to the users table after verifying their email
+CREATE TABLE IF NOT EXISTS pending_registrations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email TEXT NOT NULL,
+  password_hash TEXT NOT NULL,
+  name TEXT NULL,
+  token TEXT NOT NULL UNIQUE,
+  expires_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Indexes for pending registrations
+CREATE INDEX IF NOT EXISTS idx_pending_registrations_token ON pending_registrations(token);
+CREATE INDEX IF NOT EXISTS idx_pending_registrations_email ON pending_registrations(LOWER(email));
+CREATE INDEX IF NOT EXISTS idx_pending_registrations_expires ON pending_registrations(expires_at);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_pending_registrations_email_unique ON pending_registrations(LOWER(email));
 
 -- Sessions (optional if using server-side sessions)
 CREATE TABLE IF NOT EXISTS sessions (
@@ -250,17 +284,37 @@ CREATE TABLE IF NOT EXISTS newsletter_subscriptions (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Upsert/linking rules (documented expectations)
--- 1) On Google OAuth sign-in:
---    - If a user with same email exists and provider='local', set users.google_id if NULL (link accounts). Keep provider='local' so local login remains allowed.
---    - If no user exists, create with provider='google', password_hash=NULL, verified=FALSE; send verification email; local login must be disabled.
--- 2) On Local register:
---    - If a user exists with provider='google', do NOT allow setting a password; reject with message that Google account exists (no local login).
---    - If no user exists, create with provider='local' and password_hash set; verified=FALSE; send verification email.
--- 3) On Local login:
---    - Only permitted when provider='local' and verified=TRUE.
--- 4) On Google login:
---    - Permit regardless of verified flag, but require email verification before granting full access if business rules require; otherwise mark verified upon email confirmation.
+-- Authentication and registration rules (documented expectations)
+-- 
+-- NEW EMAIL VERIFICATION FLOW:
+-- - Local registrations are stored in pending_registrations table until email verified
+-- - Users are ONLY added to users table after clicking verification link
+-- - All new users are created with verified=TRUE (no unverified users in production table)
+-- 
+-- 1) On Local Register (NEW FLOW):
+--    - Create entry in pending_registrations (NOT users table)
+--    - Generate verification token with 24-hour expiration
+--    - Send verification email with token
+--    - On verification: create user in users table with verified=TRUE, delete pending registration
+--    - If pending registration expires: automatic cleanup removes it from pending_registrations
+-- 
+-- 2) On Google OAuth sign-in:
+--    - If a user with same email exists and provider='local', link accounts by setting users.google_id
+--    - Keep provider='local' so both local and Google login remain allowed
+--    - If no user exists, create with provider='google', password_hash=NULL, verified=TRUE (auto-verified)
+--    - Google users can immediately login without email verification
+-- 
+-- 3) On Local Login:
+--    - Only permitted when provider='local' and verified=TRUE
+--    - Users must complete email verification before first login
+-- 
+-- 4) On Google Login:
+--    - Permitted regardless of verified flag (Google OAuth implies verified email)
+--    - Can be used to link with existing local account
+-- 
+-- 5) Account Merging:
+--    - Google user can set password: sets password_hash, changes provider to 'local', keeps google_id
+--    - Result: user can login with both methods (Google OAuth OR email/password)
 
 -- Dashboard metrics (overview)
 -- This block creates a snapshot table and a view for the latest snapshot,

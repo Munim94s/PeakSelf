@@ -88,8 +88,9 @@
 }
 
 .login-oauth-btn:hover {
-  background-color: #f9fafb;
-  border-color: #d1d5db;
+  background-color: #000000;
+  border-color: #000000;
+  color: #ffffff;
 }
 
 .login-oauth-icon {

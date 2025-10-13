@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
 
 export default function Register() {
+  const navigate = useNavigate();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -22,8 +24,8 @@ export default function Register() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Registration failed');
-      // Auto-redirect home after successful registration (session cookie set)
-      window.location.href = '/';
+      // Redirect to check-email page with the email address
+      navigate(`/check-email?email=${encodeURIComponent(email)}`);
     } catch (err) {
       setMsg(err.message || 'Registration failed');
     } finally {

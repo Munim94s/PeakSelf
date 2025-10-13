@@ -39,6 +39,12 @@ const logos = {
       <circle cx="17" cy="7" r="1.3" fill="#fff"/>
     </svg>
   ),
+  facebook: (
+    <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden>
+      <rect x="2" y="2" width="20" height="20" rx="2" fill="#1877f2"/>
+      <path d="M16 8h-2c-.5 0-1 .5-1 1v2h3l-.5 3h-2.5v7h-3v-7H8v-3h2V9c0-2 1.5-4 4-4h2v3z" fill="#fff"/>
+    </svg>
+  ),
   youtube: (
     <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden>
       <rect x="2" y="6" width="20" height="12" rx="3" fill="#ff0000"/>
@@ -195,7 +201,7 @@ export default function AdminSessions() {
                       border: '2px solid #e5e7eb',
                       position: 'relative'
                     }}>
-                      {logos[(s.first_source || 'other')] || logos.other}
+                      {logos[(s.visitor_source || 'other')] || logos.other}
                       <div style={{
                         position: 'absolute',
                         bottom: -6,
@@ -210,7 +216,7 @@ export default function AdminSessions() {
                         whiteSpace: 'nowrap',
                         border: '1.5px solid #fff'
                       }}>
-                        {s.first_source || 'other'}
+                        {s.visitor_source || 'other'}
                       </div>
                     </div>
 
@@ -310,138 +316,246 @@ export default function AdminSessions() {
         )}
       </div>
 
-      {/* Modal for session details */}
+      {/* Modal for session details - Redesigned */}
       {modalOpen && selectedId && (
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content session-details-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2 className="modal-title">Session Details</h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ 
+                  width: 42, 
+                  height: 42, 
+                  borderRadius: 10, 
+                  background: 'linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 4px 12px rgba(9, 105, 218, 0.25)'
+                }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M12 1v6m0 6v6M5.6 5.6l4.2 4.2m4.2 4.2l4.2 4.2M1 12h6m6 0h6M5.6 18.4l4.2-4.2m4.2-4.2l4.2-4.2"/>
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="modal-title" style={{ marginBottom: 2 }}>Session Details</h2>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 500 }}>Complete session analytics & tracking data</div>
+                </div>
+              </div>
               <button className="modal-close" onClick={() => setModalOpen(false)}>×</button>
             </div>
             <div className="modal-body">
               {detail ? (
-                <div>
-                  {/* Top badge row with first and current sources */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div style={{ width: 36, height: 36, borderRadius: 10, display: 'grid', placeItems: 'center', background: '#f3f4f6' }}>
-                        {logos[(detail.first_source || 'other')] || logos.other}
+                <div className="session-details-content">
+                  {/* Status and Source Banner */}
+                  <div className="session-status-banner">
+                    <div className="status-sources">
+                      <div className="source-item">
+                        <div className="source-icon">
+                          {logos[(detail.visitor_source || 'other')] || logos.other}
+                        </div>
+                        <div className="source-info">
+                          <div className="source-label">Visitor Source</div>
+                          <div className="source-value">{detail.visitor_source || 'other'}</div>
+                        </div>
                       </div>
-                      <div>
-                        <div style={{ fontSize: 11, color: '#6b7280' }}>First source</div>
-                        <div style={{ fontSize: 13, fontWeight: 800 }}>{detail.first_source || 'other'}</div>
+                      <div className="source-arrow">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M5 12h14M12 5l7 7-7 7"/>
+                        </svg>
+                      </div>
+                      <div className="source-item">
+                        <div className="source-icon">
+                          {logos[(detail.source || 'other')] || logos.other}
+                        </div>
+                        <div className="source-info">
+                          <div className="source-label">Session Source</div>
+                          <div className="source-value">{detail.source || 'other'}</div>
+                        </div>
                       </div>
                     </div>
-                    <div style={{ width: 1, height: 36, background: '#e5e7eb' }} />
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div style={{ width: 36, height: 36, borderRadius: 10, display: 'grid', placeItems: 'center', background: '#f3f4f6' }}>
-                        {logos[(detail.current_source || detail.source || 'other')] || logos.other}
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 11, color: '#6b7280' }}>Current source</div>
-                        <div style={{ fontSize: 13, fontWeight: 800 }}>{detail.current_source || detail.source || 'other'}</div>
-                      </div>
+                    <div className="status-badge-container">
+                      <span className={`status-badge ${(detail.ended_at || (Date.now() - new Date(detail.last_seen_at).getTime() > 30*60*1000)) ? 'ended' : 'active'}`}>
+                        <span className="status-dot"></span>
+                        {(detail.ended_at || (Date.now() - new Date(detail.last_seen_at).getTime() > 30*60*1000)) ? 'Ended' : 'Active'}
+                      </span>
                     </div>
-                    <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 800, padding: '4px 8px', borderRadius: 999, border: '1px solid', borderColor: (detail.ended_at || (Date.now() - new Date(detail.last_seen_at).getTime() > 30*60*1000)) ? '#e5e7eb' : '#bbf7d0', color: (detail.ended_at || (Date.now() - new Date(detail.last_seen_at).getTime() > 30*60*1000)) ? '#6b7280' : '#166534', background: (detail.ended_at || (Date.now() - new Date(detail.last_seen_at).getTime() > 30*60*1000)) ? '#f9fafb' : '#dcfce7' }}>
-                      {(detail.ended_at || (Date.now() - new Date(detail.last_seen_at).getTime() > 30*60*1000)) ? 'Ended' : 'Active'}
-                    </span>
                   </div>
 
-                  {/* Details grid */}
-                  <div className="detail-grid">
-                    <div className="detail-item">
-                      <div className="detail-label">Session ID</div>
-                      <div className="detail-value large">{detail.id}</div>
-                    </div>
-                    <div className="detail-item">
-                      <div className="detail-label">Visitor ID</div>
-                      <div className="detail-value">{detail.visitor_id}</div>
-                    </div>
-                    <div className="detail-item">
-                      <div className="detail-label">User ID</div>
-                      <div className="detail-value">{detail.user_id || '—'}</div>
-                    </div>
-                    <div className="detail-item">
-                      <div className="detail-label">Session source</div>
-                      <div className="detail-value">{detail.source}</div>
-                    </div>
-                    <div className="detail-item">
-                      <div className="detail-label">Landing Path</div>
-                      <div className="detail-value">{detail.landing_path || '/'}</div>
-                    </div>
-                    <div className="detail-item">
-                      <div className="detail-label">Started</div>
-                      <div className="detail-value">{formatFullTime(detail.started_at)}</div>
-                    </div>
-                    <div className="detail-item">
-                      <div className="detail-label">Last Seen</div>
-                      <div className="detail-value">{formatFullTime(detail.last_seen_at)}</div>
-                    </div>
-                  <div className="detail-item">
-                    <div className="detail-label">Ended</div>
-                    <div className="detail-value">{(detail.ended_at || (Date.now() - new Date(detail.last_seen_at).getTime() > 30*60*1000)) ? (detail.ended_at ? formatFullTime(detail.ended_at) : 'Ended (inferred)') : 'Active'}</div>
-                  </div>
-                    <div className="detail-item">
-                      <div className="detail-label">Page Count</div>
-                      <div className="detail-value">{detail.page_count}</div>
-                    </div>
-                    {detail.first_referrer !== undefined && (
-                      <div className="detail-item">
-                        <div className="detail-label">First Referrer</div>
-                        <div className="detail-value">{detail.first_referrer || 'No referrer'}</div>
+                  {/* Session Metrics Cards */}
+                  <div className="session-metrics-grid">
+                    <div className="metric-card">
+                      <div className="metric-icon" style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="10"/>
+                          <polyline points="12 6 12 12 16 14"/>
+                        </svg>
                       </div>
-                    )}
-                    {detail.current_referrer !== undefined && (
-                      <div className="detail-item">
-                        <div className="detail-label">Current Referrer</div>
-                        <div className="detail-value">{detail.current_referrer || 'No referrer'}</div>
+                      <div className="metric-info">
+                        <div className="metric-label">Started</div>
+                        <div className="metric-value">{formatTime(detail.started_at)}</div>
+                        <div className="metric-subtitle">{new Date(detail.started_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
                       </div>
-                    )}
-                    {detail.user_agent && (
-                      <div className="detail-item user-agent-detail">
-                        <div className="detail-label">User Agent</div>
-                        <div className="detail-value">{detail.user_agent}</div>
+                    </div>
+                    <div className="metric-card">
+                      <div className="metric-icon" style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                        </svg>
                       </div>
-                    )}
-                    {detail.ip && (
-                      <div className="detail-item">
-                        <div className="detail-label">IP</div>
-                        <div className="detail-value">{detail.ip}</div>
+                      <div className="metric-info">
+                        <div className="metric-label">Last Seen</div>
+                        <div className="metric-value">{formatTime(detail.last_seen_at)}</div>
+                        <div className="metric-subtitle">{new Date(detail.last_seen_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
                       </div>
-                    )}
+                    </div>
+                    <div className="metric-card">
+                      <div className="metric-icon" style={{ background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                          <polyline points="14 2 14 8 20 8"/>
+                          <line x1="12" y1="18" x2="12" y2="12"/>
+                          <line x1="9" y1="15" x2="15" y2="15"/>
+                        </svg>
+                      </div>
+                      <div className="metric-info">
+                        <div className="metric-label">Pages Viewed</div>
+                        <div className="metric-value">{detail.page_count}</div>
+                        <div className="metric-subtitle">{detail.page_count === 1 ? 'Single page' : 'Multiple pages'}</div>
+                      </div>
+                    </div>
                   </div>
 
-                  <div style={{ marginTop: 16 }}>
-                    <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8 }}>Events</div>
-                    <div className="table-scroll-container">
-                      <table className="traffic-table">
-                        <thead>
-                          <tr>
-                            <th>Time</th>
-                            <th>Route</th>
-                            <th>Referrer</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {events.map((e, idx) => (
-                            <tr key={idx}>
-                              <td>{formatFullTime(e.occurred_at)}</td>
-                              <td>{e.path || '/'}</td>
-                              <td>{e.referrer || 'No referrer'}</td>
-                            </tr>
-                          ))}
-                          {events.length === 0 && (
-                            <tr>
-                              <td colSpan={3} style={{ textAlign: 'center', color: '#666', padding: 16 }}>No events</td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
+                  {/* Session Information Card */}
+                  <div className="info-section">
+                    <div className="section-header">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="16" x2="12" y2="12"/>
+                        <line x1="12" y1="8" x2="12.01" y2="8"/>
+                      </svg>
+                      Session Information
                     </div>
+                    <div className="info-grid">
+                      <div className="info-item">
+                        <div className="info-label">Session ID</div>
+                        <div className="info-value info-code">{detail.id}</div>
+                      </div>
+                      <div className="info-item">
+                        <div className="info-label">Visitor ID</div>
+                        <div className="info-value info-code">{detail.visitor_id}</div>
+                      </div>
+                      <div className="info-item">
+                        <div className="info-label">User ID</div>
+                        <div className="info-value">{detail.user_id || <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>Anonymous</span>}</div>
+                      </div>
+                      <div className="info-item">
+                        <div className="info-label">Landing Path</div>
+                        <div className="info-value info-path">{detail.landing_path || '/'}</div>
+                      </div>
+                      {detail.referrer !== undefined && (
+                        <div className="info-item full-width">
+                          <div className="info-label">Referrer</div>
+                          <div className="info-value info-url">{detail.referrer || <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>Direct traffic</span>}</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Technical Details Card */}
+                  <div className="info-section">
+                    <div className="section-header">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                        <line x1="8" y1="21" x2="16" y2="21"/>
+                        <line x1="12" y1="17" x2="12" y2="21"/>
+                      </svg>
+                      Technical Details
+                    </div>
+                    <div className="info-grid">
+                      {detail.ip && (
+                        <div className="info-item">
+                          <div className="info-label">IP Address</div>
+                          <div className="info-value info-code">{detail.ip}</div>
+                        </div>
+                      )}
+                      <div className="info-item">
+                        <div className="info-label">Session Ended</div>
+                        <div className="info-value">
+                          {(detail.ended_at || (Date.now() - new Date(detail.last_seen_at).getTime() > 30*60*1000)) 
+                            ? (detail.ended_at ? new Date(detail.ended_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Ended (inferred)') 
+                            : <span style={{ color: '#10b981', fontWeight: 600 }}>Active Session</span>}
+                        </div>
+                      </div>
+                      {detail.user_agent && (
+                        <div className="info-item full-width">
+                          <div className="info-label">User Agent</div>
+                          <div className="info-value info-small">{detail.user_agent}</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Events Timeline */}
+                  <div className="info-section events-section">
+                    <div className="section-header">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                      </svg>
+                      Session Events Timeline
+                      <span className="event-count">{events.length} {events.length === 1 ? 'event' : 'events'}</span>
+                    </div>
+                    {events.length > 0 ? (
+                      <div className="events-timeline">
+                        {events.map((e, idx) => (
+                          <div key={idx} className="event-item">
+                            <div className="event-marker">
+                              <div className="event-dot"></div>
+                              {idx !== events.length - 1 && <div className="event-line"></div>}
+                            </div>
+                            <div className="event-content">
+                              <div className="event-header">
+                                <div className="event-time">{formatTime(e.occurred_at)}</div>
+                                <div className="event-time-full">{new Date(e.occurred_at).toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
+                              </div>
+                              <div className="event-path">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                  <polyline points="14 2 14 8 20 8"/>
+                                </svg>
+                                {e.path || '/'}
+                              </div>
+                              {e.referrer && (
+                                <div className="event-referrer">
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                                  </svg>
+                                  from {e.referrer}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="empty-state">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="10"/>
+                          <line x1="12" y1="8" x2="12" y2="12"/>
+                          <line x1="12" y1="16" x2="12.01" y2="16"/>
+                        </svg>
+                        <div className="empty-title">No Events Recorded</div>
+                        <div className="empty-description">This session doesn't have any tracked events yet.</div>
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : (
-                <div>Loading…</div>
+                <div className="loading-state">
+                  <div className="loading-spinner"></div>
+                  <div style={{ marginTop: 12, fontSize: 14, color: 'var(--text-muted)' }}>Loading session details...</div>
+                </div>
               )}
             </div>
           </div>
