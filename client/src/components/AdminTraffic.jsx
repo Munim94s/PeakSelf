@@ -251,7 +251,6 @@ async function loadEvents(nextPage = 0) {
     setPage(nextPage);
     setError('');
   } catch (e) {
-    console.error('Traffic events error:', e);
     setError(e.message || 'Failed to load events');
   } finally {
     setLoading(false);
@@ -259,11 +258,7 @@ async function loadEvents(nextPage = 0) {
 }
 
   const cards = useMemo(() => {
-    // Use traffic summary from API instead of counting paginated events
-    console.log('Traffic summary for cards:', trafficSummary);
-    
     if (!trafficSummary) {
-      console.log('No traffic summary available, returning zero counts');
       return [
         { key: 'instagram', title: 'Instagram', value: 0, color: 'linear-gradient(135deg,#f58529,#dd2a7b,#8134af)', icon: logos.instagram },
         { key: 'facebook', title: 'Facebook', value: 0, color: '#1877f2', icon: logos.facebook },
@@ -286,7 +281,6 @@ async function loadEvents(nextPage = 0) {
       { key: 'google', title: 'Google', value: googleCount, color: '#f1f3f4', icon: logos.google },
       { key: 'other', title: 'Others', value: otherCount, color: '#111', icon: logos.other },
     ];
-    console.log('REAL traffic counts from database:', { instagram: instagramCount, facebook: facebookCount, youtube: youtubeCount, google: googleCount, other: otherCount });
     return cardsData;
   }, [trafficSummary]);
 

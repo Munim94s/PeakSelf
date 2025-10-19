@@ -52,17 +52,18 @@ export default function AdminOverview() {
         <StatCard title="Total Users" value={fmt(d.total_users)} subtitle={d.signups_24h != null ? `+${fmt(d.signups_24h)} / 24h` : ''} />
         <StatCard title="Verified Users" value={fmt(d.verified_users)} subtitle="" />
         <StatCard title="Newsletter Subs" value={fmt(d.newsletter_total)} subtitle={d.newsletter_signups_24h != null ? `+${fmt(d.newsletter_signups_24h)} / 24h` : ''} />
-        <StatCard title="Traffic • Instagram" value={fmt(d.traffic_instagram)} subtitle={"last 7 days"} />
-        <StatCard title="Traffic • YouTube" value={fmt(d.traffic_youtube)} subtitle={"last 7 days"} />
-        <StatCard title="Traffic • Google" value={fmt(d.traffic_google)} subtitle={"last 7 days"} />
-        <StatCard title="Traffic • Others" value={fmt(d.traffic_others)} subtitle={"last 7 days"} />
+        <StatCard title="Sessions • Instagram" value={fmt(d.sessions_instagram)} subtitle={"last 7 days"} />
+        <StatCard title="Sessions • Facebook" value={fmt(d.sessions_facebook)} subtitle={"last 7 days"} />
+        <StatCard title="Sessions • YouTube" value={fmt(d.sessions_youtube)} subtitle={"last 7 days"} />
+        <StatCard title="Sessions • Google" value={fmt(d.sessions_google)} subtitle={"last 7 days"} />
+        <StatCard title="Sessions • Others" value={fmt(d.sessions_others)} subtitle={"last 7 days"} />
       </div>
 
-      {Array.isArray(d.traffic_others_refs) && d.traffic_others_refs.length > 0 && (
+      {Array.isArray(d.sessions_others_refs) && d.sessions_others_refs.length > 0 && (
         <div className="content-card">
           <div className="content-title">Top "Others" Referrers (7d)</div>
           <ul style={{ margin: '8px 0 0 0', paddingLeft: 18 }}>
-            {d.traffic_others_refs.map((ref, idx) => (
+            {d.sessions_others_refs.map((ref, idx) => (
               <li key={idx} style={{ color: '#444', fontSize: 13, marginTop: 4 }}>{String(ref)}</li>
             ))}
           </ul>

@@ -1,8 +1,3 @@
-/**
- * Run this script to add the pending_registrations table to your database
- * Usage: node server/migrations/run_migration.js
- */
-
 import pg from 'pg';
 import fs from 'fs';
 import { fileURLToPath } from 'url';

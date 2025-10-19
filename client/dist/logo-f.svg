@@ -1,0 +1,60 @@
+<svg width="800" height="800" viewBox="0 0 800 800" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFEA7F"/>
+      <stop offset="100%" stop-color="#FF9BD0"/>
+    </linearGradient>
+
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feOffset dy="10" in="SourceAlpha" result="off"/>
+      <feGaussianBlur in="off" stdDeviation="12" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.35 0"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <pattern id="dots" patternUnits="userSpaceOnUse" width="40" height="40">
+      <circle cx="10" cy="10" r="4" fill="rgba(255,255,255,0.35)"/>
+      <circle cx="30" cy="30" r="3" fill="rgba(255,255,255,0.25)"/>
+    </pattern>
+  </defs>
+
+  <!-- Playful rounded card background with subtle shadow -->
+  <rect x="50" y="50" width="700" height="700" rx="60" fill="url(#bg)" filter="url(#shadow)"/>
+  <rect x="50" y="50" width="700" height="700" rx="60" fill="url(#dots)" opacity="0.4"/>
+
+  <!-- Center badge blob -->
+  <g transform="translate(400,400)">
+    <ellipse rx="260" ry="200" fill="rgba(255,255,255,0.35)" transform="rotate(-6)"/>
+  </g>
+
+  <!-- Cartoonish F with chunky outline and slight tilt -->
+  <!-- Outline layer (black) -->
+  <text x="400" y="400" text-anchor="middle" dominant-baseline="middle"
+        font-family="'Baloo', 'Comic Sans MS', 'Arial Rounded MT Bold', 'Trebuchet MS', sans-serif"
+        font-size="460" font-weight="900" fill="#000000" stroke="#000000" stroke-width="28"
+        paint-order="stroke fill" transform="rotate(-4 400 400)">F</text>
+
+  <!-- Fill layer (white) -->
+  <text x="400" y="400" text-anchor="middle" dominant-baseline="middle"
+        font-family="'Baloo', 'Comic Sans MS', 'Arial Rounded MT Bold', 'Trebuchet MS', sans-serif"
+        font-size="460" font-weight="900" fill="#ffffff" stroke="#ffffff" stroke-width="10"
+        paint-order="stroke fill" transform="rotate(-4 400 400)">F</text>
+
+  <!-- Tiny sparkles for fun -->
+  <g fill="#ffffff" opacity="0.9">
+    <circle cx="130" cy="180" r="6"/>
+    <circle cx="180" cy="150" r="3"/>
+    <circle cx="620" cy="210" r="4"/>
+    <circle cx="650" cy="180" r="2.5"/>
+    <circle cx="160" cy="640" r="3.5"/>
+    <circle cx="630" cy="620" r="5"/>
+  </g>
+</svg>
+
+<svg width="800" height="800" viewBox="0 0 800 800" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="800" fill="#000000"/>
+  <text x="400" y="440" font-family="Times, serif" font-size="480" font-weight="bold" text-anchor="middle" dominant-baseline="middle" fill="#ffffff">F</text>
+</svg>

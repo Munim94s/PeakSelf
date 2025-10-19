@@ -422,15 +422,19 @@ router.get('/sessions/:id/events', requireAdmin, async (req, res) => {
 router.get('/dashboard', requireAdmin, async (req, res) => {
   try {
     // Try the materialized snapshot first
-    const snap = await pool.query(
-      `SELECT snapshot_at,
-              total_users, verified_users, signups_24h,
-              newsletter_total, newsletter_signups_24h,
-              traffic_instagram, traffic_facebook, traffic_youtube, traffic_google, traffic_others, traffic_others_refs
-       FROM dashboard_overview_latest`
-    );
-    if (snap.rows[0]) {
-      return res.json({ source: 'snapshot', ...snap.rows[0] });
+    try {
+      const snap = await pool.query(
+        `SELECT snapshot_at,
+                total_users, verified_users, signups_24h,
+                newsletter_total, newsletter_signups_24h,
+                sessions_instagram, sessions_facebook, sessions_youtube, sessions_google, sessions_others, sessions_others_refs
+         FROM dashboard_overview_latest`
+      );
+      if (snap.rows[0]) {
+        return res.json({ source: 'snapshot', ...snap.rows[0] });
+      }
+    } catch (snapError) {
+      // View doesn't exist or has missing columns - fall back to live query
     }
 
     // Fallback: compute live metrics if no snapshot exists
@@ -447,31 +451,33 @@ router.get('/dashboard', requireAdmin, async (req, res) => {
             (SELECT COUNT(*) FROM newsletter_subscriptions)::BIGINT AS newsletter_total,
             (SELECT COUNT(*) FROM newsletter_subscriptions WHERE created_at >= NOW() - INTERVAL '24 hours')::BIGINT AS newsletter_signups_24h
         ),
-        tr AS (
+        sess AS (
           SELECT
-            COALESCE(SUM(CASE WHEN source = 'instagram' THEN 1 ELSE 0 END),0)::BIGINT AS traffic_instagram,
-            COALESCE(SUM(CASE WHEN source = 'facebook' THEN 1 ELSE 0 END),0)::BIGINT AS traffic_facebook,
-            COALESCE(SUM(CASE WHEN source = 'youtube' THEN 1 ELSE 0 END),0)::BIGINT AS traffic_youtube,
-            COALESCE(SUM(CASE WHEN source = 'google' THEN 1 ELSE 0 END),0)::BIGINT AS traffic_google,
-            COALESCE(SUM(CASE WHEN source = 'other' THEN 1 ELSE 0 END),0)::BIGINT AS traffic_others
-          FROM traffic_events
-          WHERE occurred_at >= NOW() - INTERVAL '7 days'
+            COALESCE(SUM(CASE WHEN source = 'instagram' THEN 1 ELSE 0 END),0)::BIGINT AS sessions_instagram,
+            COALESCE(SUM(CASE WHEN source = 'facebook' THEN 1 ELSE 0 END),0)::BIGINT AS sessions_facebook,
+            COALESCE(SUM(CASE WHEN source = 'youtube' THEN 1 ELSE 0 END),0)::BIGINT AS sessions_youtube,
+            COALESCE(SUM(CASE WHEN source = 'google' THEN 1 ELSE 0 END),0)::BIGINT AS sessions_google,
+            COALESCE(SUM(CASE WHEN source = 'other' THEN 1 ELSE 0 END),0)::BIGINT AS sessions_others
+          FROM user_sessions
+          WHERE started_at >= NOW() - INTERVAL '7 days'
         ),
         otr AS (
-          SELECT COALESCE(jsonb_agg(ref ORDER BY cnt DESC), '[]'::jsonb) AS traffic_others_refs
+          SELECT COALESCE(jsonb_agg(ref ORDER BY cnt DESC), '[]'::jsonb) AS sessions_others_refs
           FROM (
-            SELECT COALESCE(NULLIF(referrer,''),'(direct)') AS ref, COUNT(*) AS cnt
-            FROM traffic_events
-            WHERE occurred_at >= NOW() - INTERVAL '7 days' AND source = 'other'
-            GROUP BY COALESCE(NULLIF(referrer,''),'(direct)')
+            SELECT COALESCE(NULLIF(v.referrer,''),'(direct)') AS ref, COUNT(*) AS cnt
+            FROM user_sessions s
+            JOIN visitors v ON v.id = s.visitor_id
+            WHERE s.started_at >= NOW() - INTERVAL '7 days' AND s.source = 'other'
+            GROUP BY COALESCE(NULLIF(v.referrer,''),'(direct)')
             ORDER BY cnt DESC
             LIMIT 5
           ) t
         )
       SELECT u.total_users, u.verified_users, u.signups_24h,
              n.newsletter_total, n.newsletter_signups_24h,
-             tr.traffic_instagram, tr.traffic_facebook, tr.traffic_youtube, tr.traffic_google, tr.traffic_others,
-             otr.traffic_others_refs`);
+             sess.sessions_instagram, sess.sessions_facebook, sess.sessions_youtube, sess.sessions_google, sess.sessions_others,
+             otr.sessions_others_refs
+        FROM u, n, sess, otr`);
 
     return res.json({ source: 'live', snapshot_at: new Date().toISOString(), ...live.rows[0] });
   } catch (e) {

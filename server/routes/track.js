@@ -168,9 +168,9 @@ async function ensureSession(req, res, visitor, source, landingPath, userAgent, 
     try {
       await pool.query(
         `UPDATE users
-           SET first_source = COALESCE(first_source, $1),
-               first_referrer = COALESCE(first_referrer, $2),
-               first_landing_path = COALESCE(first_landing_path, $3)
+           SET source = COALESCE(source, $1),
+               referrer = COALESCE(referrer, $2),
+               landing_path = COALESCE(landing_path, $3)
          WHERE id = $4`,
         [
           visitor?.source || source || 'other',

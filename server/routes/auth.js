@@ -17,12 +17,12 @@ async function ensureSchema() {
       ALTER TABLE users
         ADD COLUMN IF NOT EXISTS name TEXT,
         ADD COLUMN IF NOT EXISTS avatar_url TEXT,
-        ADD COLUMN IF NOT EXISTS first_source TEXT,
-        ADD COLUMN IF NOT EXISTS first_referrer TEXT,
-        ADD COLUMN IF NOT EXISTS first_landing_path TEXT
+        ADD COLUMN IF NOT EXISTS source TEXT,
+        ADD COLUMN IF NOT EXISTS referrer TEXT,
+        ADD COLUMN IF NOT EXISTS landing_path TEXT
     `);
   } catch (e) {
-    console.warn('Warning: Failed to ensure users table optional columns (name, avatar_url, first_source, first_referrer, first_landing_path):', e.message);
+    console.warn('Warning: Failed to ensure users table optional columns (name, avatar_url, source, referrer, landing_path):', e.message);
   }
 }
 
@@ -40,9 +40,7 @@ setInterval(async () => {
       const result = await pool.query(
         "DELETE FROM pending_registrations WHERE expires_at < NOW()"
       );
-      if (result.rowCount > 0) {
-        console.log(`Cleaned up ${result.rowCount} expired pending registration(s)`);
-      }
+      // Cleanup completed silently
     } catch (e) {
       console.warn('Failed to cleanup expired pending registrations:', e.message);
     }
@@ -60,13 +58,7 @@ const transporter = nodemailer.createTransport({
   } : undefined,
 });
 
-// Log email configuration status
-if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
-  console.log('✅ Email (SMTP) configured:', process.env.SMTP_HOST);
-} else {
-  console.log('📧 Email (SMTP) not configured - verification links will be logged to console');
-  console.log('   💡 To enable emails, set: SMTP_HOST, SMTP_USER, SMTP_PASS in .env');
-}
+// Email configuration is validated in validateEnv.js
 
 async function sendVerificationEmail(email, token) {
   const base = process.env.APP_BASE_URL || `http://localhost:${process.env.PORT || 5000}`;
@@ -90,16 +82,16 @@ async function sendVerificationEmail(email, token) {
       subject: "Verify your PeakSelf account",
       html: `<p>Click to verify your email:</p><p><a href="${url}">${url}</a></p>`
     });
-    console.log(`✅ Verification email sent to ${email}`);
+    // Email sent successfully
   } catch (e) {
-    // Log detailed error but don't block registration
-    console.error('❌ Email send failed:', e.message);
-    console.log('\n' + '='.repeat(80));
-    console.log('📧 [FALLBACK] Verification link (email failed to send):');
-    console.log('   Email: ' + email);
-    console.log('   Link:  ' + url);
-    console.log('   Error: ' + e.message);
-    console.log('='.repeat(80) + '\n');
+    // Log link to console if email fails (development fallback)
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('\n' + '='.repeat(80));
+      console.log('📧 [FALLBACK] Verification link:');
+      console.log('   Email: ' + email);
+      console.log('   Link:  ' + url);
+      console.log('='.repeat(80) + '\n');
+    }
   }
 }
 
@@ -177,16 +169,14 @@ if (isGoogleEnabled()) {
         [email, googleId, displayName, avatarUrl]
       );
       const user = insert.rows[0];
-      console.log(`New Google user created: ${email}`);
       return done(null, user);
     } catch (e) {
-      console.error('Google OAuth error:', e);
       return done(e);
     }
   }));
-  console.log('Google OAuth strategy initialized');
+  // Google OAuth strategy initialized
 } else {
-  console.log('Google OAuth not configured - missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET');
+  // Google OAuth not configured
 }
 
 // Helpers
@@ -281,7 +271,6 @@ router.post("/register", authPasswordLimiter, async (req, res) => {
       email: lower
     });
   } catch (e) {
-    console.error('Registration error:', e);
     const msg = process.env.NODE_ENV === 'production' ? 'Registration failed' : `Registration failed: ${e.message}`;
     res.status(500).json({ error: msg });
   }
@@ -316,7 +305,6 @@ router.post("/login", authPasswordLimiter, async (req, res) => {
       return req.session.save(() => res.json({ message: "Logged in", user: { id: user.id, email: user.email, provider: user.provider, verified: user.verified, name: user.name, avatar_url: user.avatar_url, role: user.role } }));
     });
   } catch (e) {
-    console.error('Login error:', e);
     const msg = process.env.NODE_ENV === 'production' ? 'Login failed' : `Login failed: ${e.message}`;
     res.status(500).json({ error: msg });
   }
@@ -328,10 +316,6 @@ router.get("/google", authOAuthLimiter, (req, res, next) => {
     return res.status(503).json({ error: "Google OAuth not configured" });
   }
   
-  console.log('\n🟦 Starting Google OAuth flow');
-  console.log('   Session ID:', req.sessionID);
-  console.log('   Session exists:', !!req.session);
-  console.log('   Current user:', req.user?.email || 'none');
   return passport.authenticate("google", { scope: ["profile", "email"] })(req, res, next);
 });
 
@@ -339,46 +323,26 @@ router.get("/google", authOAuthLimiter, (req, res, next) => {
 router.get("/google/callback", authOAuthLimiter, (req, res, next) => {
   if (!isGoogleEnabled()) return res.status(503).json({ error: "Google OAuth not configured" });
   
-  console.log('\n🔵 Google OAuth callback received');
-  console.log('   Session ID:', req.sessionID);
-  console.log('   Has session:', !!req.session);
-  console.log('   Cookie header:', req.headers.cookie?.substring(0, 100) + '...');
-  return passport.authenticate("google", { 
+  return passport.authenticate("google", {
     failureRedirect: `${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=oauth_failed` 
   })(req, res, next);
 }, async (req, res) => {
-  console.log('\n🟢 Google OAuth authenticate success');
-  console.log('   User from passport:', req.user?.email, 'ID:', req.user?.id);
-  console.log('   Session ID after auth:', req.sessionID);
   try {
     if (req.user) {
       const user = await getUserById(req.user.id);
-      console.log('   User from DB:', user?.email);
       if (!user) {
-        console.log('   ❌ User not found in DB!');
         return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=user_not_found`);
       }
       const token = signJwt(user);
-      console.log('   JWT created:', token.substring(0, 20) + '...');
-      console.log('   Setting cookie and redirecting to:', process.env.CLIENT_URL || 'http://localhost:5173');
       setJwtCookie(res, token);
       
-      // Also save session
       req.session.save((err) => {
-        if (err) {
-          console.error('   ❌ Session save error:', err);
-        } else {
-          console.log('   ✅ Session saved successfully');
-        }
         return res.redirect(process.env.CLIENT_URL || 'http://localhost:5173');
       });
       return;
     }
-    console.log('   ❌ No req.user, redirecting to login with error');
     return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=oauth_failed`);
   } catch (e) {
-    console.error('\n❌ Post Google login error:', e);
-    console.error('   Stack:', e.stack);
     return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=oauth_failed`);
   }
 });
@@ -417,7 +381,6 @@ router.get("/verify-email", authGeneralLimiter, async (req, res) => {
             [pending.password_hash, pending.name, existing.id]
           );
           user = updated.rows[0];
-          console.log(`Google OAuth account merged with local password: ${user.email}`);
         } else {
           // User exists with local provider - this shouldn't happen but handle it
           await pool.query("DELETE FROM pending_registrations WHERE id = $1", [pending.id]);
@@ -430,7 +393,6 @@ router.get("/verify-email", authGeneralLimiter, async (req, res) => {
           [pending.email.toLowerCase(), pending.password_hash, pending.name]
         );
         user = newUser.rows[0];
-        console.log(`New user created after email verification: ${user.email}`);
       }
       
       // Delete the pending registration
@@ -476,7 +438,6 @@ router.get("/verify-email", authGeneralLimiter, async (req, res) => {
     const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
     return res.redirect(`${clientUrl}?verified=true`);
   } catch (e) {
-    console.error('Email verification error:', e);
     const msg = process.env.NODE_ENV === 'production' ? 'Verification failed' : `Verification failed: ${e.message}`;
     res.status(500).json({ error: msg });
   }
@@ -484,43 +445,26 @@ router.get("/verify-email", authGeneralLimiter, async (req, res) => {
 
 // Logout
 router.post("/logout", authGeneralLimiter, (req, res) => {
-  console.log('\n🔴 Logout request received');
-  console.log('   Session ID:', req.sessionID);
-  console.log('   Has session:', !!req.session);
-  console.log('   Current user:', req.user?.email || 'none');
-  console.log('   Has JWT cookie:', !!req.cookies?.access_token);
-  
-  // Clear JWT cookie with same options as setJwtCookie
   res.clearCookie('access_token', {
     httpOnly: true,
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
-    path: '/'  // Must match cookie creation
+    path: '/'
   });
-  console.log('   ✅ JWT cookie cleared');
   
-  // Clear passport session
   req.logout((err) => {
     if (err) {
-      console.error('   ❌ Logout session error:', err);
       return res.status(500).json({ error: 'Logout failed' });
     }
-    console.log('   ✅ Passport logout successful');
     
-    // Check if session exists before destroying
     if (!req.session) {
-      console.log('   ⚠️  No session to destroy');
       return res.json({ message: "Logged out successfully" });
     }
     
-    // Destroy session completely
     req.session.destroy((err) => {
       if (err) {
-        console.error('   ❌ Session destroy error:', err);
-        // Still return success as cookie is cleared
-        return res.json({ message: "Logged out successfully (session destroy failed)" });
+        return res.json({ message: "Logged out successfully" });
       }
-      console.log('   ✅ Session destroyed successfully');
       res.json({ message: "Logged out successfully" });
     });
   });
