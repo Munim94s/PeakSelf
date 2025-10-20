@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { BarChart3, Users as UsersIcon, FileText, Settings as SettingsIcon, Activity } from 'lucide-react';
+import { apiFetch } from '../utils/api';
 import AdminSettings from '../components/AdminSettings';
 import AdminOverview from '../components/AdminOverview';
 import AdminUsers from '../components/AdminUsers';
@@ -21,7 +22,7 @@ export default function Admin() {
     let cancelled = false;
     async function checkAuth() {
       try {
-        const res = await fetch(`${API_BASE}/api/admin`, { credentials: 'include' });
+        const res = await apiFetch(`${API_BASE}/api/admin`, {});
         if (res.status === 401 || res.status === 403) {
           window.location.href = '/not-accessible';
           return;

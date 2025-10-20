@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
+import { apiFetch } from '../utils/api';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
 
@@ -42,10 +43,9 @@ export default function Tracker() {
         trackingData.source = sourceHint;
       }
 
-      fetch(`${API_BASE}/api/track`, {
+      apiFetch(`${API_BASE}/api/track`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify(trackingData)
       }).catch(() => {});
     } catch (_) {}

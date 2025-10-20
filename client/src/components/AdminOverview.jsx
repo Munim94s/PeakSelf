@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { apiFetch } from '../utils/api';
 import './AdminContent.css';
 import './AdminTraffic.css';
 
@@ -13,7 +14,7 @@ export default function AdminOverview() {
     let cancelled = false;
     async function load() {
       try {
-        const res = await fetch(`${API_BASE}/api/admin/dashboard`, { credentials: 'include' });
+        const res = await apiFetch(`${API_BASE}/api/admin/dashboard`, {});
         if (res.status === 401 || res.status === 403) {
           window.location.href = '/not-accessible';
           return;

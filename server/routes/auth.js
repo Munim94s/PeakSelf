@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { v4 as uuidv4 } from "uuid";
 import nodemailer from "nodemailer";
 import jwt from "jsonwebtoken";
+import logger from "../utils/logger.js";
 import pool, { isDatabaseAvailable, checkDatabaseAvailability } from "../utils/db.js";
 import { authPasswordLimiter, authOAuthLimiter, authGeneralLimiter } from "../middleware/rateLimiter.js";
 
@@ -22,7 +23,7 @@ async function ensureSchema() {
         ADD COLUMN IF NOT EXISTS landing_path TEXT
     `);
   } catch (e) {
-    console.warn('Warning: Failed to ensure users table optional columns (name, avatar_url, source, referrer, landing_path):', e.message);
+    logger.warn('Warning: Failed to ensure users table optional columns (name, avatar_url, source, referrer, landing_path):', e.message);
   }
 }
 
@@ -42,7 +43,7 @@ setInterval(async () => {
       );
       // Cleanup completed silently
     } catch (e) {
-      console.warn('Failed to cleanup expired pending registrations:', e.message);
+      logger.warn('Failed to cleanup expired pending registrations:', e.message);
     }
   }
 }, 1000 * 60 * 60); // Run every hour
@@ -66,11 +67,11 @@ async function sendVerificationEmail(email, token) {
   
   // If SMTP not configured, log link to console for development
   if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
-    console.log('\n' + '='.repeat(80));
-    console.log('📧 [DEV MODE] Email verification link:');
-    console.log('   Email: ' + email);
-    console.log('   Link:  ' + url);
-    console.log('='.repeat(80) + '\n');
+    logger.info('\n' + '='.repeat(80));
+    logger.info('📧 [DEV MODE] Email verification link:');
+    logger.info('   Email: ' + email);
+    logger.info('   Link:  ' + url);
+    logger.info('='.repeat(80) + '\n');
     return;
   }
   
@@ -86,11 +87,11 @@ async function sendVerificationEmail(email, token) {
   } catch (e) {
     // Log link to console if email fails (development fallback)
     if (process.env.NODE_ENV !== 'production') {
-      console.log('\n' + '='.repeat(80));
-      console.log('📧 [FALLBACK] Verification link:');
-      console.log('   Email: ' + email);
-      console.log('   Link:  ' + url);
-      console.log('='.repeat(80) + '\n');
+      logger.info('\n' + '='.repeat(80));
+      logger.info('📧 [FALLBACK] Verification link:');
+      logger.info('   Email: ' + email);
+      logger.info('   Link:  ' + url);
+      logger.info('='.repeat(80) + '\n');
     }
   }
 }

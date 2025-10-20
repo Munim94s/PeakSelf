@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { apiFetch } from '../utils/api';
 import './AdminTraffic.css';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
@@ -93,7 +94,7 @@ export default function AdminSessions() {
       if (filterVisitorId) params.set('visitor_id', filterVisitorId);
       params.set('limit', '50');
       params.set('offset', String(nextPage * 50));
-      const res = await fetch(`${API_BASE}/api/admin/sessions?${params.toString()}`, { credentials: 'include' });
+      const res = await apiFetch(`${API_BASE}/api/admin/sessions?${params.toString()}`, {});
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Failed to load sessions');
       setSessions(Array.isArray(json.sessions) ? json.sessions : []);
@@ -114,8 +115,8 @@ export default function AdminSessions() {
       setDetail(null);
       setEvents([]);
       const [res1, res2] = await Promise.all([
-        fetch(`${API_BASE}/api/admin/sessions/${id}`, { credentials: 'include' }),
-        fetch(`${API_BASE}/api/admin/sessions/${id}/events`, { credentials: 'include' })
+        apiFetch(`${API_BASE}/api/admin/sessions/${id}`, {}),
+        apiFetch(`${API_BASE}/api/admin/sessions/${id}/events`, {})
       ]);
       const json1 = await res1.json();
       const json2 = await res2.json();

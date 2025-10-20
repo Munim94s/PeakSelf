@@ -1,6 +1,7 @@
 import express from "express";
 import { v4 as uuidv4, validate as uuidValidate } from "uuid";
 import jwt from "jsonwebtoken";
+import logger from "../utils/logger.js";
 import pool from "../utils/db.js";
 
 const router = express.Router();
@@ -20,7 +21,7 @@ async function ensureTrafficEventsTable() {
       )
     `);
   } catch (e) {
-    console.warn('Warning: failed to ensure traffic_events table:', e.message);
+    logger.warn('Warning: failed to ensure traffic_events table:', e.message);
   }
 }
 ensureTrafficEventsTable();
@@ -244,12 +245,12 @@ router.post('/', async (req, res) => {
         [source, referrer, path || '/', userAgent, ip]
       );
     } catch (e2) {
-      console.warn('Warning: failed to insert traffic_events (continuing):', e2.message);
+      logger.warn('Warning: failed to insert traffic_events (continuing):', e2.message);
     }
 
     res.json({ ok: true, visitor_id: visitor.id, session_id: sessionId });
   } catch (e) {
-    console.error('Track error (falling back to simple traffic log):', e);
+    logger.error('Track error (falling back to simple traffic log):', e);
     // Fallback: record minimal traffic so admin stats are not empty
     try {
       await pool.query(
@@ -257,7 +258,7 @@ router.post('/', async (req, res) => {
         [source, referrer, path || '/', userAgent, ip]
       );
     } catch (e3) {
-      console.warn('Warning: failed fallback traffic_events insert:', e3.message);
+      logger.warn('Warning: failed fallback traffic_events insert:', e3.message);
     }
     // Do not reveal details to client
     res.status(200).json({ ok: true });

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
+import { apiFetch } from '../utils/api';
 import './AdminTraffic.css';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
@@ -243,7 +244,7 @@ async function loadEvents(nextPage = 0) {
     if (range) params.set('range', range);
     params.set('limit', '50');
     params.set('offset', String(nextPage * 50));
-    const res = await fetch(`${API_BASE}/api/admin/traffic/events?${params.toString()}`, { credentials: 'include' });
+    const res = await apiFetch(`${API_BASE}/api/admin/traffic/events?${params.toString()}`, {});
     const json = await res.json();
     if (!res.ok) throw new Error(json.error || 'Failed to load events');
     setEvents(json.events || []);

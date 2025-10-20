@@ -1,4 +1,5 @@
 import { Pool } from "pg";
+import logger from "./logger.js";
 
 // Validate DATABASE_URL environment variable
 const dbUrl = process.env.DATABASE_URL;
@@ -21,12 +22,12 @@ let isDatabaseAvailable = false;
 // Test database connection on startup
 pool.connect(async (err, client, release) => {
   if (err) {
-    console.warn('Warning: Database connection failed:', err.message);
-    console.warn('Server will start but database features will not work.');
-    console.warn('For local development, consider setting up a local PostgreSQL database.');
+    logger.warn('Warning: Database connection failed:', err.message);
+    logger.warn('Server will start but database features will not work.');
+    logger.warn('For local development, consider setting up a local PostgreSQL database.');
     isDatabaseAvailable = false;
   } else {
-    console.log('Database connected successfully');
+    logger.info('Database connected successfully');
     isDatabaseAvailable = true;
     release();
   }

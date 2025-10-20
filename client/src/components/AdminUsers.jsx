@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { apiFetch } from '../utils/api';
 import './AdminUsers.css';
 import './AdminTraffic.css';
 
@@ -18,9 +19,7 @@ export default function AdminUsers() {
       const params = new URLSearchParams();
       if (searchTerm) params.set('q', searchTerm);
       if (filter && filter !== 'all') params.set('filter', filter);
-      const res = await fetch(`${API_BASE}/api/admin/users?${params.toString()}`, {
-        credentials: 'include'
-      });
+      const res = await apiFetch(`${API_BASE}/api/admin/users?${params.toString()}`, {});
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to load users');
       setUsers(Array.isArray(data.users) ? data.users : []);
@@ -40,10 +39,9 @@ export default function AdminUsers() {
     const email = window.prompt('Enter email to invite:');
     if (!email) return;
     try {
-      const res = await fetch(`${API_BASE}/api/admin/users/invite`, {
+      const res = await apiFetch(`${API_BASE}/api/admin/users/invite`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ email })
       });
       const data = await res.json();
@@ -62,9 +60,8 @@ export default function AdminUsers() {
 
   const makeAdmin = async (id) => {
     try {
-      const res = await fetch(`${API_BASE}/api/admin/users/${encodeURIComponent(id)}/make-admin`, {
-        method: 'POST',
-        credentials: 'include'
+      const res = await apiFetch(`${API_BASE}/api/admin/users/${encodeURIComponent(id)}/make-admin`, {
+        method: 'POST'
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to promote user');
@@ -76,9 +73,8 @@ export default function AdminUsers() {
 
   const removeAdmin = async (id) => {
     try {
-      const res = await fetch(`${API_BASE}/api/admin/users/${encodeURIComponent(id)}/remove-admin`, {
-        method: 'POST',
-        credentials: 'include'
+      const res = await apiFetch(`${API_BASE}/api/admin/users/${encodeURIComponent(id)}/remove-admin`, {
+        method: 'POST'
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to remove admin role');
@@ -91,9 +87,8 @@ export default function AdminUsers() {
   const removeUser = async (id) => {
     if (!window.confirm('Are you sure you want to remove this user?')) return;
     try {
-      const res = await fetch(`${API_BASE}/api/admin/users/${encodeURIComponent(id)}`, {
-        method: 'DELETE',
-        credentials: 'include'
+      const res = await apiFetch(`${API_BASE}/api/admin/users/${encodeURIComponent(id)}`, {
+        method: 'DELETE'
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to remove user');

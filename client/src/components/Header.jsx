@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, Search } from 'lucide-react';
+import { apiFetch, resetCsrfToken } from '../utils/api';
 import './Header.css';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
@@ -77,16 +78,18 @@ const Header = () => {
     console.log('🔴 Frontend: Logout clicked');
     try {
       console.log('   Making logout request to:', `${API_BASE}/api/auth/logout`);
-      const res = await fetch(`${API_BASE}/api/auth/logout`, { method: 'POST', credentials: 'include' });
+      const res = await apiFetch(`${API_BASE}/api/auth/logout`, { method: 'POST' });
       console.log('   Logout response status:', res.status);
       const data = await res.json();
       console.log('   Logout response:', data);
+      resetCsrfToken(); // Clear CSRF token cache
       setUser(null);
       console.log('   User state cleared, redirecting to /');
       window.location.href = '/';
     } catch (err) {
       console.error('   ❌ Logout error:', err);
       // Still clear user and redirect even on error
+      resetCsrfToken();
       setUser(null);
       window.location.href = '/';
     }

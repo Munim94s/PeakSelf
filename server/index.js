@@ -5,6 +5,8 @@ import session from "express-session";
 import cookieParser from "cookie-parser";
 import passport from "passport";
 import helmet from "helmet";
+import morgan from "morgan";
+import logger from "./utils/logger.js";
 import validateEnv from "./utils/validateEnv.js";
 import { 
   authGeneralLimiter, 
@@ -13,6 +15,7 @@ import {
   trackingLimiter,
   globalLimiter 
 } from "./middleware/rateLimiter.js";
+import { generateCsrfToken, csrfProtection } from "./middleware/csrf.js";
 
 // Load environment variables first
 dotenv.config();
@@ -48,6 +51,19 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(cookieParser());
+
+// HTTP request logging
+if (process.env.NODE_ENV === 'production') {
+  // Production: log only errors and warnings
+  app.use(morgan('combined', {
+    skip: (req, res) => res.statusCode < 400,
+    stream: logger.stream
+  }));
+} else {
+  // Development: log all requests with concise format
+  app.use(morgan('dev', { stream: logger.stream }));
+}
+
 // Trust proxy in production (required for secure cookies behind proxies)
 if (process.env.NODE_ENV === "production") {
   app.set("trust proxy", 1);
@@ -66,6 +82,16 @@ app.use(session({
 }));
 app.use(passport.initialize());
 app.use(passport.session());
+
+// CSRF token endpoint (must be before CSRF protection)
+// The generateCsrfToken middleware automatically adds the token to res.locals
+app.get('/api/csrf-token', (req, res) => {
+  const token = generateCsrfToken(req, res);
+  res.json({ csrfToken: token });
+});
+
+// Apply CSRF protection to state-changing requests
+app.use(csrfProtection);
 
 // Dynamic import to ensure environment variables are loaded before routes
 async function setupRoutes() {
@@ -89,9 +115,9 @@ app.get('/api/health', (req, res) => {
 // Setup routes and start server
 setupRoutes().then(() => {
   app.listen(PORT, () => {
-    console.log(`API listening on http://localhost:${PORT}`);
+    logger.info(`API listening on http://localhost:${PORT}`);
   });
 }).catch((error) => {
-  console.error('Failed to setup routes:', error);
+  logger.error('Failed to setup routes:', error);
   process.exit(1);
 });

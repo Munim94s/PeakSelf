@@ -4,6 +4,7 @@ import { ArrowRight, TrendingUp, Users, BookOpen } from 'lucide-react';
 import PostList from '../components/PostList';
 import PostCard from '../components/PostCard';
 import { blogPosts } from '../data/blogPosts';
+import { apiFetch } from '../utils/api';
 import './Home.css';
 
 const Home = () => {
@@ -157,7 +158,7 @@ const Home = () => {
             if (!email) return;
             try {
               const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
-              const res = await fetch(`${API_BASE}/api/subscribe`, {
+              const res = await apiFetch(`${API_BASE}/api/subscribe`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email })

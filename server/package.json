@@ -1,35 +1,38 @@
-﻿{
-    "name":  "server",
-    "version":  "1.0.0",
-    "main":  "index.js",
-    "scripts":  {
-                    "start":  "node index.js",
-                    "dev":  "nodemon index.js",
-                    "install": "npm install",
-                    "seed:traffic": "node scripts/seed_mock_traffic.js"
-                },
-    "keywords":  [
-
-                 ],
-    "author":  "",
-    "license":  "ISC",
-  "dependencies":  {
-                         "bcryptjs":  "^2.4.3",
-                         "cookie-parser": "^1.4.6",
-                         "cors":  "^2.8.5",
-                         "dotenv":  "^16.4.5",
-                         "express":  "^5.1.0",
-                         "express-session":  "^1.17.3",
-                         "jsonwebtoken": "^9.0.2",
-                         "nodemailer":  "^6.9.13",
-                         "passport":  "^0.7.0",
-                         "passport-google-oauth20":  "^2.0.0",
-                         "pg":  "^8.11.3",
-                         "uuid":  "^9.0.1"
-                     },
-    "devDependencies":  {
-                         "nodemon":  "^3.1.9"
-                     },
-    "description":  "",
-    "type":  "module"
+{
+    "name": "server",
+    "version": "1.0.0",
+    "main": "index.js",
+    "scripts": {
+        "start": "node index.js",
+        "dev": "nodemon index.js",
+        "install": "npm install",
+        "seed:traffic": "node scripts/seed_mock_traffic.js"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "bcryptjs": "^2.4.3",
+        "cookie-parser": "^1.4.7",
+        "cors": "^2.8.5",
+        "csrf-csrf": "^4.0.3",
+        "dotenv": "^16.4.5",
+        "express": "^5.1.0",
+        "express-session": "^1.17.3",
+        "helmet": "^8.1.0",
+        "jsonwebtoken": "^9.0.2",
+        "morgan": "^1.10.1",
+        "nodemailer": "^6.9.13",
+        "passport": "^0.7.0",
+        "passport-google-oauth20": "^2.0.0",
+        "pg": "^8.11.3",
+        "uuid": "^9.0.1",
+        "winston": "^3.18.3",
+        "winston-daily-rotate-file": "^5.0.0"
+    },
+    "devDependencies": {
+        "nodemon": "^3.1.9"
+    },
+    "description": "",
+    "type": "module"
 }
