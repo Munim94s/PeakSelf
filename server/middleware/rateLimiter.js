@@ -6,6 +6,7 @@
  */
 
 import rateLimit from 'express-rate-limit';
+import { RATE_LIMITS } from '../constants.js';
 
 /**
  * Standard error handler for rate limit exceeded
@@ -39,8 +40,8 @@ const oauthRateLimitHandler = (req, res) => {
  * Limits: 5 requests per 30 minutes per IP
  */
 export const authPasswordLimiter = rateLimit({
-  windowMs: 30 * 60 * 1000, // 30 minutes
-  max: 5, // 5 requests per window
+  windowMs: RATE_LIMITS.AUTH_PASSWORD.windowMs,
+  max: RATE_LIMITS.AUTH_PASSWORD.max,
   message: 'Too many authentication attempts from this IP, please try again after 30 minutes',
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
@@ -56,8 +57,8 @@ export const authPasswordLimiter = rateLimit({
  * Limits: 5 requests per 15 minutes per IP
  */
 export const authOAuthLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 requests per window
+  windowMs: RATE_LIMITS.AUTH_OAUTH.windowMs,
+  max: RATE_LIMITS.AUTH_OAUTH.max,
   message: 'Too many OAuth attempts from this IP, please try again after 15 minutes',
   standardHeaders: true,
   legacyHeaders: false,
@@ -71,8 +72,8 @@ export const authOAuthLimiter = rateLimit({
  * Limits: 15 requests per 30 minutes per IP
  */
 export const authGeneralLimiter = rateLimit({
-  windowMs: 30 * 60 * 1000, // 30 minutes
-  max: 15, // 15 requests per window
+  windowMs: RATE_LIMITS.AUTH_GENERAL.windowMs,
+  max: RATE_LIMITS.AUTH_GENERAL.max,
   message: 'Too many authentication requests from this IP, please try again after 30 minutes',
   standardHeaders: true,
   legacyHeaders: false,
@@ -87,8 +88,8 @@ export const authGeneralLimiter = rateLimit({
  * Limits: 3 requests per 15 minutes per IP
  */
 export const subscribeLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 3, // 3 requests per window
+  windowMs: RATE_LIMITS.SUBSCRIBE.windowMs,
+  max: RATE_LIMITS.SUBSCRIBE.max,
   message: 'Too many subscription attempts from this IP, please try again after 15 minutes',
   standardHeaders: true,
   legacyHeaders: false,
@@ -103,8 +104,8 @@ export const subscribeLimiter = rateLimit({
  * Limits: 100 requests per 15 minutes per IP
  */
 export const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // 100 requests per window
+  windowMs: RATE_LIMITS.API.windowMs,
+  max: RATE_LIMITS.API.max,
   message: 'Too many requests from this IP, please try again after 15 minutes',
   standardHeaders: true,
   legacyHeaders: false,
@@ -119,8 +120,8 @@ export const apiLimiter = rateLimit({
  * Limits: 30 requests per 15 minutes per IP
  */
 export const adminLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 30, // 30 requests per window
+  windowMs: RATE_LIMITS.ADMIN.windowMs,
+  max: RATE_LIMITS.ADMIN.max,
   message: 'Too many admin requests from this IP, please try again after 15 minutes',
   standardHeaders: true,
   legacyHeaders: false,
@@ -135,8 +136,8 @@ export const adminLimiter = rateLimit({
  * Limits: 500 requests per 15 minutes per IP
  */
 export const trackingLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 500, // 500 requests per window
+  windowMs: RATE_LIMITS.TRACKING.windowMs,
+  max: RATE_LIMITS.TRACKING.max,
   message: 'Too many tracking requests from this IP',
   standardHeaders: true,
   legacyHeaders: false,
@@ -151,8 +152,8 @@ export const trackingLimiter = rateLimit({
  * Limits: 200 requests per 15 minutes per IP
  */
 export const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200, // 200 requests per window
+  windowMs: RATE_LIMITS.GLOBAL.windowMs,
+  max: RATE_LIMITS.GLOBAL.max,
   message: 'Too many requests from this IP, please slow down',
   standardHeaders: true,
   legacyHeaders: false,

@@ -14,7 +14,7 @@ export default function AdminOverview() {
     let cancelled = false;
     async function load() {
       try {
-        const res = await apiFetch(`${API_BASE}/api/admin/dashboard`, {});
+        const res = await apiFetch(`${API_BASE}/api/admin/overview`, {});
         if (res.status === 401 || res.status === 403) {
           window.location.href = '/not-accessible';
           return;

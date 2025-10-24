@@ -8,6 +8,7 @@ import helmet from "helmet";
 import morgan from "morgan";
 import logger from "./utils/logger.js";
 import validateEnv from "./utils/validateEnv.js";
+import { COOKIE_SESSION_MAX_AGE, DEFAULT_SESSION_SECRET } from "./constants.js";
 import { 
   authGeneralLimiter, 
   subscribeLimiter, 
@@ -70,14 +71,14 @@ if (process.env.NODE_ENV === "production") {
 }
 
 app.use(session({
-  secret: process.env.SESSION_SECRET || "dev_secret_change_me",
+  secret: process.env.SESSION_SECRET || DEFAULT_SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
-    maxAge: 1000 * 60 * 60 * 24 * 7,
+    maxAge: COOKIE_SESSION_MAX_AGE,
   },
 }));
 app.use(passport.initialize());
@@ -97,7 +98,7 @@ app.use(csrfProtection);
 async function setupRoutes() {
   const { default: authRouter } = await import("./routes/auth.js");
   const { default: subscribeRouter } = await import("./routes/subscribe.js");
-  const { default: adminRouter } = await import("./routes/admin.js");
+  const { default: adminRouter } = await import("./routes/admin/index.js");
   const { default: trackRouter } = await import("./routes/track.js");
   
   // Apply specific rate limiters to routes

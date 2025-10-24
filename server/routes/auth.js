@@ -8,6 +8,13 @@ import jwt from "jsonwebtoken";
 import logger from "../utils/logger.js";
 import pool, { isDatabaseAvailable, checkDatabaseAvailability } from "../utils/db.js";
 import { authPasswordLimiter, authOAuthLimiter, authGeneralLimiter } from "../middleware/rateLimiter.js";
+import { verifyJwt as verifyJwtHelper } from "../middleware/auth.js";
+import { 
+  COOKIE_JWT_MAX_AGE, 
+  JWT_EXPIRATION, 
+  EMAIL_VERIFICATION_EXPIRATION_MS,
+  DEFAULT_JWT_SECRET 
+} from "../constants.js";
 
 const router = express.Router();
 
@@ -189,9 +196,9 @@ function ensureLocalAllowed(user) {
 }
 
 function signJwt(user) {
-  const secret = process.env.JWT_SECRET || "dev_jwt_secret_change_me";
+  const secret = process.env.JWT_SECRET || DEFAULT_JWT_SECRET;
   const payload = { sub: user.id, email: user.email, role: user.role };
-  const token = jwt.sign(payload, secret, { algorithm: 'HS256', expiresIn: '1d' });
+  const token = jwt.sign(payload, secret, { algorithm: 'HS256', expiresIn: JWT_EXPIRATION });
   return token;
 }
 
@@ -205,21 +212,12 @@ function setJwtCookie(res, token) {
     httpOnly: true,
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
-    maxAge: 1000 * 60 * 60 * 24, // 1 day
+    maxAge: COOKIE_JWT_MAX_AGE,
   });
 }
 
-function verifyJwtFromRequest(req) {
-  try {
-    const token = req.cookies?.access_token || (req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.slice(7) : null);
-    if (!token) return null;
-    const secret = process.env.JWT_SECRET || "dev_jwt_secret_change_me";
-    const decoded = jwt.verify(token, secret);
-    return decoded;
-  } catch (_) {
-    return null;
-  }
-}
+// Use centralized verifyJwt from middleware
+const verifyJwtFromRequest = verifyJwtHelper;
 
 // Local register (NEW FLOW: stores in pending_registrations until email verified)
 router.post("/register", authPasswordLimiter, async (req, res) => {
@@ -256,7 +254,7 @@ router.post("/register", authPasswordLimiter, async (req, res) => {
     // Hash password and create pending registration
     const hash = await bcrypt.hash(password, 10);
     const token = uuidv4();
-    const expires = new Date(Date.now() + 1000 * 60 * 60 * 24); // 24 hours
+    const expires = new Date(Date.now() + EMAIL_VERIFICATION_EXPIRATION_MS);
     
     await pool.query(
       "INSERT INTO pending_registrations (email, password_hash, name, token, expires_at) VALUES ($1, $2, $3, $4, $5)",

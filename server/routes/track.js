@@ -1,8 +1,16 @@
 import express from "express";
 import { v4 as uuidv4, validate as uuidValidate } from "uuid";
-import jwt from "jsonwebtoken";
 import logger from "../utils/logger.js";
 import pool from "../utils/db.js";
+import { verifyJwt } from "../middleware/auth.js";
+import { 
+  TRACKING_COOKIES, 
+  COOKIE_VISITOR_MAX_AGE, 
+  COOKIE_SESSION_TRACKING_MAX_AGE,
+  COOKIE_SOURCE_MAX_AGE,
+  SESSION_TIMEOUT_MS,
+  DEFAULT_JWT_SECRET
+} from "../constants.js";
 
 const router = express.Router();
 
@@ -26,19 +34,13 @@ async function ensureTrafficEventsTable() {
 }
 ensureTrafficEventsTable();
 
-// Cookie names and durations
-const COOKIE_VISITOR_ID = 'ps_vid'; // 30 days
-const COOKIE_SESSION_ID = 'ps_sid'; // 30 minutes (sliding)
-const COOKIE_SRC = 'ps_src'; // 30 days, never overwritten once set
-const THIRTY_DAYS_MS = 1000 * 60 * 60 * 24 * 30;
-const THIRTY_MIN_MS = 1000 * 60 * 30;
 
 function cookieOpts(days = false) {
   return {
     httpOnly: true,
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
-    maxAge: days ? THIRTY_DAYS_MS : THIRTY_MIN_MS,
+    maxAge: days ? COOKIE_VISITOR_MAX_AGE : COOKIE_SESSION_TRACKING_MAX_AGE,
     path: '/',
   };
 }
@@ -58,16 +60,6 @@ function safeStr(v, max) {
   return v.substring(0, max);
 }
 
-function verifyJwt(req) {
-  try {
-    const token = req.cookies?.access_token || (req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.slice(7) : null);
-    if (!token) return null;
-    const secret = process.env.JWT_SECRET || "dev_jwt_secret_change_me";
-    return jwt.verify(token, secret);
-  } catch (_) {
-    return null;
-  }
-}
 
 function currentUserId(req) {
   const decoded = verifyJwt(req);
@@ -84,8 +76,8 @@ async function verifyUserId(userId) {
 
 async function ensureVisitor(req, res, source, referrer, landingPath) {
   // Try to use existing visitor cookie if present and valid
-  const vidCookie = req.cookies?.[COOKIE_VISITOR_ID];
-  const sourceCookie = req.cookies?.[COOKIE_SRC];
+  const vidCookie = req.cookies?.[TRACKING_COOKIES.VISITOR_ID];
+  const sourceCookie = req.cookies?.[TRACKING_COOKIES.SOURCE];
   const userId = await verifyUserId(currentUserId(req));
 
   const visitorSource = sourceCookie || source || 'other';
@@ -113,9 +105,9 @@ async function ensureVisitor(req, res, source, referrer, landingPath) {
       visitor = upd.rows[0];
     }
     // Ensure cookies are set if missing/expired
-    if (!sourceCookie) res.cookie(COOKIE_SRC, visitor.source, cookieOpts(true));
+    if (!sourceCookie) res.cookie(TRACKING_COOKIES.SOURCE, visitor.source, cookieOpts(true));
     // Refresh visitor cookie TTL
-    res.cookie(COOKIE_VISITOR_ID, visitor.id, cookieOpts(true));
+    res.cookie(TRACKING_COOKIES.VISITOR_ID, visitor.id, cookieOpts(true));
     return visitor;
   }
 
@@ -125,8 +117,8 @@ async function ensureVisitor(req, res, source, referrer, landingPath) {
              RETURNING *`;
   const ins = await pool.query(q, [userId, visitorSource, safeStr(referrer, 2048), safeStr(landingPath, 512)]);
   const visitor = ins.rows[0];
-  res.cookie(COOKIE_VISITOR_ID, visitor.id, cookieOpts(true));
-  res.cookie(COOKIE_SRC, visitor.source, cookieOpts(true));
+  res.cookie(TRACKING_COOKIES.VISITOR_ID, visitor.id, cookieOpts(true));
+  res.cookie(TRACKING_COOKIES.SOURCE, visitor.source, cookieOpts(true));
   return visitor;
 }
 
@@ -139,7 +131,7 @@ async function getActiveSession(sessionId) {
   const now = new Date(s.now);
   const last = new Date(s.last_seen_at);
   const diff = now.getTime() - last.getTime();
-  if (diff > THIRTY_MIN_MS) return null;
+  if (diff > SESSION_TIMEOUT_MS) return null;
   return s;
 }
 
@@ -160,7 +152,7 @@ async function endStaleSessionIfAny(sessionId) {
 }
 
 async function ensureSession(req, res, visitor, source, landingPath, userAgent, ip, referrer) {
-  const sidCookie = req.cookies?.[COOKIE_SESSION_ID];
+  const sidCookie = req.cookies?.[TRACKING_COOKIES.SESSION_ID];
   const existing = await getActiveSession(sidCookie);
   const userId = await verifyUserId(currentUserId(req));
 
@@ -190,7 +182,7 @@ async function ensureSession(req, res, visitor, source, landingPath, userAgent, 
     if (userId && (existing.user_id !== userId)) {
       await pool.query('UPDATE user_sessions SET user_id = $2 WHERE id = $1', [existing.id, userId]);
     }
-    res.cookie(COOKIE_SESSION_ID, existing.id, cookieOpts(false));
+    res.cookie(TRACKING_COOKIES.SESSION_ID, existing.id, cookieOpts(false));
     return existing.id;
   }
 
@@ -206,7 +198,7 @@ async function ensureSession(req, res, visitor, source, landingPath, userAgent, 
     [visitor.id, userId, source || visitor.source || 'other', safeStr(landingPath, 512), safeStr(userAgent, 512), safeStr(ip, 128)]
   );
   const sid = insert.rows[0].id;
-  res.cookie(COOKIE_SESSION_ID, sid, cookieOpts(false));
+  res.cookie(TRACKING_COOKIES.SESSION_ID, sid, cookieOpts(false));
   return sid;
 }
 
