@@ -17,6 +17,7 @@ import {
   globalLimiter 
 } from "./middleware/rateLimiter.js";
 import { generateCsrfToken, csrfProtection } from "./middleware/csrf.js";
+import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 
 // Load environment variables first
 dotenv.config();
@@ -121,6 +122,12 @@ app.get('/api/health', (req, res) => {
 
 // Setup routes and start server
 setupRoutes().then(() => {
+  // 404 handler for unmatched routes (must be after all routes)
+  app.use(notFoundHandler);
+  
+  // Global error handler (must be last middleware)
+  app.use(errorHandler);
+  
   app.listen(PORT, () => {
     logger.info(`API listening on http://localhost:${PORT}`);
   });
