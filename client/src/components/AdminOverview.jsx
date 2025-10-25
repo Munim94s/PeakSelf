@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { apiFetch } from '../utils/api';
 import './AdminContent.css';
-import './AdminTraffic.css';
+import './AdminSessions.css';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
 

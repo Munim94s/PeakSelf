@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../utils/api';
-import './AdminTraffic.css';
+import './AdminSessions.css';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
 
@@ -158,19 +158,18 @@ export default function AdminSessions() {
                     position: 'relative',
                     textAlign: 'left',
                     background: '#ffffff',
-                    border: '2px solid #e1e5e9',
-                    borderBottom: '3px solid var(--accent)',
                     borderRadius: 14,
                     padding: 0,
                     display: 'flex',
                     flexDirection: 'column',
                     cursor: 'pointer',
                     overflow: 'hidden',
-                    transition: 'all 0.2s ease'
+                    transition: 'all 0.2s ease',
+                    borderColor: '#e1e5e9'
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.borderColor = 'var(--accent)';
+                    e.currentTarget.style.borderColor = '#000000';
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.transform = 'translateY(0)';
@@ -184,7 +183,7 @@ export default function AdminSessions() {
                     top: 0,
                     bottom: 0,
                     width: 4,
-                    background: `linear-gradient(180deg, var(--accent) 0%, var(--accent-dark) 100%)`
+                    background: '#000000'
                   }} />
 
                   {/* Card content - single row layout */}
@@ -211,7 +210,7 @@ export default function AdminSessions() {
                         background: '#111',
                         color: '#fff',
                         fontSize: 9,
-                        fontWeight: 600,
+                        fontWeight: 300,
                         padding: '2px 6px',
                         borderRadius: 4,
                         whiteSpace: 'nowrap',
@@ -224,11 +223,11 @@ export default function AdminSessions() {
                     {/* Middle: Time info in compact grid */}
                     <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                       <div>
-                        <div style={{ fontSize: 11, color: '#666', fontWeight: 600, marginBottom: 3 }}>Started</div>
+                        <div style={{ fontSize: 11, color: '#666', fontWeight: 300, marginBottom: 3 }}>Started</div>
                         <div style={{ fontSize: 14, fontWeight: 600, color: '#111' }}>{formatTime(s.started_at)}</div>
                       </div>
                       <div>
-                        <div style={{ fontSize: 11, color: '#666', fontWeight: 600, marginBottom: 3 }}>Last Seen</div>
+                        <div style={{ fontSize: 11, color: '#666', fontWeight: 300, marginBottom: 3 }}>Last Seen</div>
                         <div style={{ fontSize: 14, fontWeight: 600, color: '#111' }}>{formatTime(s.last_seen_at)}</div>
                       </div>
                       <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
@@ -240,8 +239,8 @@ export default function AdminSessions() {
                           alignItems: 'center',
                           gap: 4
                         }}>
-                          <span style={{ fontSize: 11, color: '#666', fontWeight: 600 }}>Source</span>
-                          <span style={{ fontSize: 12, fontWeight: 600, color: '#111' }}>{s.source || 'other'}</span>
+                          <span style={{ fontSize: 11, color: '#666', fontWeight: 300 }}>Source</span>
+                          <span style={{ fontSize: 12, fontWeight: 300, color: '#111' }}>{s.source || 'other'}</span>
                         </div>
                         <div style={{ 
                           background: '#f3f4f6', 
@@ -251,8 +250,8 @@ export default function AdminSessions() {
                           alignItems: 'center',
                           gap: 4
                         }}>
-                          <span style={{ fontSize: 11, color: '#666', fontWeight: 600 }}>Pages</span>
-                          <span style={{ fontSize: 12, fontWeight: 600, color: '#111' }}>{s.page_count}</span>
+                          <span style={{ fontSize: 11, color: '#666', fontWeight: 300 }}>Pages</span>
+                          <span style={{ fontSize: 12, fontWeight: 300, color: '#111' }}>{s.page_count}</span>
                         </div>
                       </div>
                     </div>

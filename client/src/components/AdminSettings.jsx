@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import './AdminTraffic.css';
+import './AdminSessions.css';
 
 export default function AdminSettings() {
   const [tab, setTab] = useState('general');
