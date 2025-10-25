@@ -23,8 +23,8 @@ export const ONE_WEEK_MS = 7 * ONE_DAY_MS;
 // COOKIE CONFIGURATION
 // ============================================================================
 
-/** Max age for JWT access token cookie (1 day) */
-export const COOKIE_JWT_MAX_AGE = ONE_DAY_MS;
+/** Max age for JWT access token cookie (10 day) */
+export const COOKIE_JWT_MAX_AGE = 30 * ONE_DAY_MS;
 
 /** Max age for session cookie (7 days) */
 export const COOKIE_SESSION_MAX_AGE = ONE_WEEK_MS;

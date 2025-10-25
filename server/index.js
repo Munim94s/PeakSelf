@@ -91,8 +91,14 @@ app.get('/api/csrf-token', (req, res) => {
   res.json({ csrfToken: token });
 });
 
-// Apply CSRF protection to state-changing requests
-app.use(csrfProtection);
+// Apply CSRF protection to state-changing requests (except multipart uploads)
+app.use((req, res, next) => {
+  // Skip CSRF for multipart/form-data uploads - they handle CSRF separately
+  if (req.path.includes('/upload-image')) {
+    return next();
+  }
+  return csrfProtection(req, res, next);
+});
 
 // Dynamic import to ensure environment variables are loaded before routes
 async function setupRoutes() {

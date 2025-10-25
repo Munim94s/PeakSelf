@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { BarChart3, Users as UsersIcon, FileText, Settings as SettingsIcon, Activity } from 'lucide-react';
+import { BarChart3, Users as UsersIcon, FileText, Settings as SettingsIcon, Activity, Menu, X } from 'lucide-react';
 import { apiFetch } from '../utils/api';
 import AdminSettings from '../components/AdminSettings';
 import AdminOverview from '../components/AdminOverview';
@@ -14,6 +14,7 @@ export default function Admin() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [user, setUser] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -59,9 +60,57 @@ export default function Admin() {
   const activeSection = sections.find(s => s.path === currentPath)?.key || 'overview';
 
   return (
-    <div style={{display: 'flex', minHeight: 'calc(100vh - 64px)', background: '#ebebeb'}}>
+    <div style={{display: 'flex', minHeight: 'calc(100vh - 64px)', background: '#ebebeb', position: 'relative'}}>
+      {/* Mobile menu button */}
+      <button
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        style={{
+          position: 'fixed',
+          top: 80,
+          left: 16,
+          zIndex: 1000,
+          background: '#000',
+          border: '1px solid #333',
+          borderRadius: 8,
+          padding: '0.5rem',
+          cursor: 'pointer',
+          display: 'none',
+          color: '#fff'
+        }}
+        className="mobile-menu-btn"
+      >
+        {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+      </button>
+
+      {/* Sidebar overlay for mobile */}
+      {sidebarOpen && (
+        <div
+          onClick={() => setSidebarOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            zIndex: 998,
+            display: 'none'
+          }}
+          className="sidebar-overlay"
+        />
+      )}
+
       {/* Sidebar */}
-      <aside style={{width: 260, borderRight: '1px solid #111', background: '#000'}}>
+      <aside
+        style={{
+          width: 260,
+          borderRight: '1px solid #111',
+          background: '#000',
+          position: 'fixed',
+          height: 'calc(100vh - 64px)',
+          paddingTop: 60,
+          zIndex: 999,
+          transition: 'transform 0.3s ease'
+        }}
+        className={`admin-sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}
+      >
         <div style={{padding: '1rem 1rem 0.5rem 1rem'}}>
           <div style={{fontSize: 18, fontWeight: 800, color: '#fff'}}>Admin</div>
           <div style={{fontSize: 12, color: '#bbb'}}>Signed in as</div>
@@ -71,7 +120,10 @@ export default function Admin() {
           {sections.map((s) => (
             <button
               key={s.key}
-              onClick={() => navigate(s.path)}
+              onClick={() => {
+                navigate(s.path);
+                setSidebarOpen(false);
+              }}
               style={{
                 width: '100%',
                 display: 'flex',
@@ -95,7 +147,7 @@ export default function Admin() {
       </aside>
 
       {/* Main content */}
-      <section style={{flex: 1, padding: '1.25rem'}}>
+      <section style={{flex: 1, padding: '1.25rem', marginLeft: 260}} className="admin-main-content">
         <Routes>
           <Route index element={<Navigate to="/admin/overview" replace />} />
           <Route path="overview" element={<AdminOverview />} />
@@ -105,6 +157,32 @@ export default function Admin() {
           <Route path="settings" element={<AdminSettings />} />
         </Routes>
       </section>
+
+      <style>{`
+        @media (max-width: 768px) {
+          .mobile-menu-btn {
+            display: block !important;
+          }
+          .sidebar-overlay {
+            display: block !important;
+          }
+          .admin-sidebar {
+            transform: translateX(-100%);
+          }
+          .admin-sidebar.sidebar-open {
+            transform: translateX(0);
+          }
+          .admin-main-content {
+            margin-left: 0 !important;
+          }
+        }
+        @media (min-width: 769px) {
+          .admin-sidebar {
+            position: fixed !important;
+            transform: translateX(0) !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

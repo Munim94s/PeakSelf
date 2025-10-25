@@ -1,0 +1,264 @@
+.content-editor-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.content-editor-modal {
+  background: #fff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 900px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.editor-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.title-input {
+  width: 100%;
+  font-size: 1.75rem;
+  font-weight: 700;
+  border: none;
+  outline: none;
+  font-family: inherit;
+  padding: 0.5rem;
+  background: transparent;
+}
+
+.title-input::placeholder {
+  color: #aaa;
+}
+
+.editor-toolbar {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e5e5e5;
+  background: #f9f9f9;
+  flex-wrap: wrap;
+}
+
+.toolbar-btn {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 0.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  color: #111;
+}
+
+.toolbar-btn svg {
+  color: #111;
+}
+
+.toolbar-btn:hover {
+  background: #111;
+  border-color: #111;
+}
+
+.toolbar-btn:hover svg {
+  color: #fff;
+}
+
+.toolbar-btn:active {
+  background: #000;
+}
+
+.toolbar-divider {
+  width: 1px;
+  background: #ddd;
+  margin: 0 0.25rem;
+}
+
+.editor-content {
+  flex: 1;
+  padding: 1.5rem;
+  overflow-y: auto;
+  outline: none;
+  font-size: 1rem;
+  line-height: 1.7;
+  min-height: 300px;
+  max-height: 500px;
+}
+
+.editor-content:empty:before {
+  content: "Start writing your content...";
+  color: #aaa;
+}
+
+.editor-content b,
+.editor-content strong {
+  font-weight: 700;
+}
+
+.editor-content i,
+.editor-content em {
+  font-style: italic;
+}
+
+.editor-content u {
+  text-decoration: underline;
+}
+
+.editor-content a {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.editor-content a:hover {
+  color: #1d4ed8;
+}
+
+/* Images in the editor - 100% width within content area */
+.editor-content .image-wrapper {
+  display: block;
+  margin: 1rem 0;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s;
+  user-select: none;
+}
+
+.editor-content .image-wrapper.uploading {
+  opacity: 0.6;
+  position: relative;
+}
+
+.editor-content .image-wrapper.uploading::after {
+  content: "Uploading...";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+}
+
+.editor-content .image-wrapper.selected {
+  outline: 3px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.editor-content .image-wrapper:hover {
+  opacity: 0.9;
+}
+
+.editor-content img.blog-image {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+.editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1.25rem 1.5rem;
+  border-top: 1px solid #e5e5e5;
+  background: #f9f9f9;
+}
+
+.btn-primary,
+.btn-secondary {
+  padding: 0.625rem 1.25rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.btn-primary {
+  background: #111;
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: #000;
+}
+
+.btn-secondary {
+  background: #fff;
+  color: #111;
+  border: 1px solid #ddd;
+}
+
+.btn-secondary:hover {
+  background: #f5f5f5;
+}
+
+/* Link Modal */
+.link-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1001;
+}
+
+.link-modal {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  width: 90%;
+  max-width: 450px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.link-modal h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.link-input {
+  width: 100%;
+  padding: 0.625rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  margin-bottom: 0.75rem;
+  font-family: inherit;
+}
+
+.link-input:focus {
+  outline: none;
+  border-color: #111;
+}
+
+.link-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}

@@ -7,7 +7,7 @@
 
 /* Hero Section */
 .about-hero {
-  background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+  background: #000000;
   color: #ffffff;
   padding: 5rem 0;
 }
@@ -22,12 +22,13 @@
 .about-hero-title {
   font-size: 2.25rem;
   font-weight: 700;
+  color: #ffffff;
   margin-bottom: 1.5rem;
 }
 
 .about-hero-subtitle {
   font-size: 1.25rem;
-  color: #dbeafe;
+  color: #ffffff;
   line-height: 1.7;
 }
 

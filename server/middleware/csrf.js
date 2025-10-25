@@ -21,3 +21,6 @@ export const csrfProtection = csrfConfig.doubleCsrfProtection;
 // Export the token generation middleware (already creates token in response)
 export const generateCsrfToken = csrfConfig.generateCsrfToken;
 
+// Export the token validation function for manual checks
+export const validateCsrfToken = csrfConfig.validateRequest;
+

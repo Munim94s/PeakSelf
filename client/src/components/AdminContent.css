@@ -1,5 +1,33 @@
 .admin-content { display: grid; gap: 1rem; }
 
+.add-content-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #111;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  padding: 10px;
+}
+
+.add-content-btn:hover {
+  background: #000;
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.add-content-btn:active {
+  transform: scale(0.98);
+}
+
+.add-content-btn svg {
+  color: #fff;
+}
+
 /* Section toolbar shared style */
 .section-toolbar {
   display: flex;
@@ -21,7 +49,7 @@
 .btn.small { padding: 0.3rem 0.55rem; font-size: 12px; }
 .btn.danger { background: #333; color: #fff; border-color: #333; }
 
-.card-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.card-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
 .content-card { border: 1px solid #d0d0d0; border-radius: 12px; padding: 1rem; background: #f6f6f6; border-left: 3px solid #111; }
 .content-title { font-weight: 700; color: #111; }
 .content-excerpt { color: #666; font-size: 13px; margin-top: 6px; }

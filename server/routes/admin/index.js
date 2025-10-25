@@ -4,6 +4,7 @@ import dashboardRouter from "./dashboard.js";
 import usersRouter from "./users.js";
 import trafficRouter from "./traffic.js";
 import sessionsRouter from "./sessions.js";
+import blogRouter from "./blog.js";
 
 const router = express.Router();
 
@@ -15,5 +16,6 @@ router.use('/', dashboardRouter);
 router.use('/users', usersRouter);
 router.use('/traffic', trafficRouter);
 router.use('/sessions', sessionsRouter);
+router.use('/blog', blogRouter);
 
 export default router;

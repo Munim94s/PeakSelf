@@ -73,6 +73,25 @@ CREATE TABLE IF NOT EXISTS newsletter_subscriptions (
 );
 
 -- ============================================================================
+-- BLOG POSTS TABLE
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS blog_posts (
+  id SERIAL PRIMARY KEY,
+  title VARCHAR(255) NOT NULL,
+  content TEXT NOT NULL,
+  excerpt TEXT,
+  slug VARCHAR(255) UNIQUE,
+  status VARCHAR(20) DEFAULT 'draft',
+  author_id UUID REFERENCES users(id),
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  published_at TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_blog_posts_status ON blog_posts(status);
+CREATE INDEX IF NOT EXISTS idx_blog_posts_slug ON blog_posts(slug);
+
+-- ============================================================================
 -- ANALYTICS & TRACKING TABLES
 -- ============================================================================
 
