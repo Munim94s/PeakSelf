@@ -7,17 +7,8 @@ import cookieParser from "cookie-parser";
 import passport from "passport";
 import helmet from "helmet";
 import morgan from "morgan";
-import logger from "./utils/logger.js";
 import validateEnv from "./utils/validateEnv.js";
 import { COOKIE_SESSION_MAX_AGE, DEFAULT_SESSION_SECRET } from "./constants.js";
-import { 
-  authGeneralLimiter, 
-  subscribeLimiter, 
-  adminLimiter, 
-  trackingLimiter,
-  globalLimiter 
-} from "./middleware/rateLimiter.js";
-import { generateCsrfToken, csrfProtection } from "./middleware/csrf.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 
 // Load environment variables first
@@ -26,8 +17,19 @@ dotenv.config();
 // Validate environment variables before starting the server
 validateEnv();
 
-// Import database pool after environment variables are loaded
+// Import logger after env vars are loaded (it checks NODE_ENV)
+const { default: logger } = await import("./utils/logger.js");
+
+// Import database pool, rate limiters, and CSRF after environment variables are loaded
 const { default: pool } = await import("./utils/db.js");
+const { 
+  authGeneralLimiter, 
+  subscribeLimiter, 
+  adminLimiter, 
+  trackingLimiter,
+  globalLimiter 
+} = await import("./middleware/rateLimiter.js");
+const { generateCsrfToken, csrfProtection } = await import("./middleware/csrf.js");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
