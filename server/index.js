@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 import express from "express";
 import cors from "cors";
 import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
 import cookieParser from "cookie-parser";
 import passport from "passport";
 import helmet from "helmet";
@@ -24,6 +25,9 @@ dotenv.config();
 
 // Validate environment variables before starting the server
 validateEnv();
+
+// Import database pool after environment variables are loaded
+const { default: pool } = await import("./utils/db.js");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -71,7 +75,16 @@ if (process.env.NODE_ENV === "production") {
   app.set("trust proxy", 1);
 }
 
+// Configure PostgreSQL session store
+const PgSession = connectPgSimple(session);
+
 app.use(session({
+  store: new PgSession({
+    pool: pool,
+    tableName: 'session',
+    createTableIfMissing: true, // Auto-create sessions table if missing
+    pruneSessionInterval: 60 * 15, // Prune expired sessions every 15 minutes
+  }),
   secret: process.env.SESSION_SECRET || DEFAULT_SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
