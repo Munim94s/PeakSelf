@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 import express from "express";
 import cors from "cors";
+import compression from "compression";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import cookieParser from "cookie-parser";
@@ -34,6 +35,25 @@ const { generateCsrfToken, csrfProtection } = await import("./middleware/csrf.js
 const app = express();
 const PORT = process.env.PORT || 5000;
 const ORIGIN = process.env.CLIENT_URL || "http://localhost:5173";
+
+// Apply compression early in middleware chain (before other middleware)
+// Compresses response bodies for all requests (gzip/deflate)
+app.use(compression({
+  // Only compress responses larger than 1kb
+  threshold: 1024,
+  // Compression level: 0 (no compression) to 9 (best compression)
+  // Level 6 is a good balance between speed and compression ratio
+  level: 6,
+  // Filter function to determine if response should be compressed
+  filter: (req, res) => {
+    // Don't compress if client doesn't support it
+    if (req.headers['x-no-compression']) {
+      return false;
+    }
+    // Use compression's default filter (checks Content-Type)
+    return compression.filter(req, res);
+  }
+}));
 
 // Apply Helmet security headers early in middleware chain
 app.use(helmet({
