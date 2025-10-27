@@ -32,7 +32,12 @@ export function normalizeRange(range, fallbackDays = 7) {
     case 'last_year':
       return { interval: "365 days", label: "last year" };
     default: {
-      const days = Math.max(1, Math.min(365, parseInt(r || String(fallbackDays), 10) || fallbackDays));
+      const parsed = parseInt(r, 10);
+      // If parsing fails (NaN) or value is 0 or negative, use fallback
+      if (isNaN(parsed) || parsed <= 0) {
+        return { interval: `${fallbackDays} days`, label: `last ${fallbackDays} days` };
+      }
+      const days = Math.min(365, parsed);
       return { interval: `${days} days`, label: `last ${days} days` };
     }
   }

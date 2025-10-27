@@ -53,7 +53,7 @@ router.get('/', async (req, res) => {
 });
 
 // Export users to CSV
-router.get('.csv', async (req, res) => {
+router.get('/.csv', async (req, res) => {
   try {
     const { rows } = await pool.query(
       `SELECT id::text AS id, email, role, verified, name

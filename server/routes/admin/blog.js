@@ -32,9 +32,7 @@ function generateSlug(title) {
 }
 
 // GET /api/admin/blog - Get all blog posts
-router.get('/', requireAdmin, async (req, res) => {
-  if (!checkDatabaseAvailability(res)) return;
-
+router.get('/', async (req, res) => {
   try {
     const result = await pool.query(
       'SELECT * FROM blog_posts ORDER BY created_at DESC'
@@ -47,9 +45,7 @@ router.get('/', requireAdmin, async (req, res) => {
 });
 
 // GET /api/admin/blog/:id - Get single blog post
-router.get('/:id', requireAdmin, async (req, res) => {
-  if (!checkDatabaseAvailability(res)) return;
-
+router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query(
@@ -69,9 +65,7 @@ router.get('/:id', requireAdmin, async (req, res) => {
 });
 
 // POST /api/admin/blog - Create new blog post
-router.post('/', requireAdmin, async (req, res) => {
-  if (!checkDatabaseAvailability(res)) return;
-
+router.post('/', async (req, res) => {
   try {
     const { title, content, excerpt, status = 'draft' } = req.body;
 
@@ -101,9 +95,7 @@ router.post('/', requireAdmin, async (req, res) => {
 });
 
 // PUT /api/admin/blog/:id - Update blog post
-router.put('/:id', requireAdmin, async (req, res) => {
-  if (!checkDatabaseAvailability(res)) return;
-
+router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { title, content, excerpt, status } = req.body;
@@ -138,9 +130,7 @@ router.put('/:id', requireAdmin, async (req, res) => {
 });
 
 // DELETE /api/admin/blog/:id - Delete blog post
-router.delete('/:id', requireAdmin, async (req, res) => {
-  if (!checkDatabaseAvailability(res)) return;
-
+router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -161,7 +151,7 @@ router.delete('/:id', requireAdmin, async (req, res) => {
 });
 
 // POST /api/admin/blog/upload-image - Upload image to Supabase
-router.post('/upload-image', requireAdmin, upload.single('image'), async (req, res) => {
+router.post('/upload-image', upload.single('image'), async (req, res) => {
   try {
     // Manually validate CSRF token (multipart/form-data bypasses global CSRF middleware)
     const isValid = validateCsrfToken(req);

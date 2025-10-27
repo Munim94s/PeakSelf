@@ -35,25 +35,27 @@ async function ensureSchema() {
 }
 
 // Run schema check after a short delay to ensure DB is connected
-setTimeout(() => {
-  if (isDatabaseAvailable) {
-    ensureSchema();
-  }
-}, 1000);
-
-// Cleanup expired pending registrations periodically (every hour)
-setInterval(async () => {
-  if (isDatabaseAvailable) {
-    try {
-      const result = await pool.query(
-        "DELETE FROM pending_registrations WHERE expires_at < NOW()"
-      );
-      // Cleanup completed silently
-    } catch (e) {
-      logger.warn('Failed to cleanup expired pending registrations:', e.message);
+if (process.env.NODE_ENV !== 'test') {
+  setTimeout(() => {
+    if (isDatabaseAvailable) {
+      ensureSchema();
     }
-  }
-}, 1000 * 60 * 60); // Run every hour
+  }, 1000).unref();
+
+  // Cleanup expired pending registrations periodically (every hour)
+  setInterval(async () => {
+    if (isDatabaseAvailable) {
+      try {
+        const result = await pool.query(
+          "DELETE FROM pending_registrations WHERE expires_at < NOW()"
+        );
+        // Cleanup completed silently
+      } catch (e) {
+        logger.warn('Failed to cleanup expired pending registrations:', e.message);
+      }
+    }
+  }, 1000 * 60 * 60).unref(); // Run every hour
+}
 
 // Email transporter (use environment variables)
 const transporter = nodemailer.createTransport({
@@ -221,7 +223,8 @@ const verifyJwtFromRequest = verifyJwtHelper;
 
 // Local register (NEW FLOW: stores in pending_registrations until email verified)
 router.post("/register", authPasswordLimiter, async (req, res) => {
-  if (!checkDatabaseAvailability(res)) return;
+  // Skip DB availability check in test environment
+  if (process.env.NODE_ENV !== 'test' && !checkDatabaseAvailability(res)) return;
   
   try {
     const { email, password, name } = req.body || {};

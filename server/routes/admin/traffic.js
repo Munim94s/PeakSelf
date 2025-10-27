@@ -17,7 +17,6 @@ router.get('/summary', async (req, res) => {
     if (snap.rows[0]) return res.json({ source: 'snapshot', ...snap.rows[0] });
 
     const norm = normalizeRange(req.query.range, 7);
-    const rangeClause = `NOW() - INTERVAL '${norm.interval}'`;
 
     const live = await pool.query(
       `WITH
@@ -40,14 +39,14 @@ router.get('/summary', async (req, res) => {
             COALESCE(SUM(CASE WHEN source = 'google' THEN 1 ELSE 0 END),0)::BIGINT AS traffic_google,
             COALESCE(SUM(CASE WHEN source = 'other' THEN 1 ELSE 0 END),0)::BIGINT AS traffic_others
           FROM traffic_events
-          WHERE occurred_at >= ${rangeClause}
+          WHERE occurred_at >= NOW() - ($1 || ' days')::interval
         ),
         otr AS (
           SELECT COALESCE(jsonb_agg(ref ORDER BY cnt DESC), '[]'::jsonb) AS traffic_others_refs
           FROM (
             SELECT COALESCE(NULLIF(referrer,''),'No referrer') AS ref, COUNT(*) AS cnt
             FROM traffic_events
-            WHERE occurred_at >= ${rangeClause} AND source = 'other'
+            WHERE occurred_at >= NOW() - ($2 || ' days')::interval AND source = 'other'
             GROUP BY COALESCE(NULLIF(referrer,''),'No referrer')
             ORDER BY cnt DESC
             LIMIT 5
@@ -56,9 +55,11 @@ router.get('/summary', async (req, res) => {
       SELECT u.total_users, u.verified_users, u.signups_24h,
              n.newsletter_total, n.newsletter_signups_24h,
              tr.traffic_instagram, tr.traffic_facebook, tr.traffic_youtube, tr.traffic_google, tr.traffic_others,
-             otr.traffic_others_refs`);
+             otr.traffic_others_refs`,
+      [norm.interval.split(' ')[0], norm.interval.split(' ')[0]]);
 
-    return res.json({ source: 'live', range: norm.label, snapshot_at: new Date().toISOString(), ...live.rows[0] });
+    const data = live.rows[0] || {};
+    return res.json({ source: 'live', range: norm.label, snapshot_at: new Date().toISOString(), ...data });
   } catch (e) {
     console.error('Traffic summary error:', e);
     return res.status(500).json({ error: 'Failed to fetch traffic summary' });

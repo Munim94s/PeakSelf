@@ -93,11 +93,12 @@ export async function requireAdmin(req, res, next) {
     };
   }
 
-  // Determine role: prefer session role, then JWT claim, then DB (to handle stale JWTs)
+  // Determine role: prefer session role, then verify from DB if JWT present
   let role = currentUser?.role || null;
   let email = currentUser?.email || null;
 
-  if (role !== 'admin' && decoded?.sub) {
+  // Always verify role from database when JWT is present (to handle stale JWTs)
+  if (decoded?.sub) {
     try {
       const { rows } = await pool.query(
         'SELECT email, role FROM users WHERE id = $1', 
