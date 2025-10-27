@@ -7,6 +7,7 @@ import { createMockPool } from '../../setup.js';
 
 const mockPool = createMockPool();
 const mockUploadImage = jest.fn();
+const mockDeleteImage = jest.fn();
 const mockValidateCsrfToken = jest.fn(() => true);
 
 jest.unstable_mockModule('../../../utils/db.js', () => ({
@@ -17,11 +18,14 @@ jest.unstable_mockModule('../../../utils/db.js', () => ({
 jest.unstable_mockModule('../../../utils/logger.js', () => ({
   default: {
     error: jest.fn(),
+    info: jest.fn(),
+    warn: jest.fn(),
   },
 }));
 
 jest.unstable_mockModule('../../../utils/supabase.js', () => ({
   uploadImage: mockUploadImage,
+  deleteImage: mockDeleteImage,
 }));
 
 jest.unstable_mockModule('../../../middleware/csrf.js', () => ({
@@ -282,6 +286,11 @@ describe('Admin Blog Routes Tests', () => {
 
   describe('DELETE /api/admin/blog/:id', () => {
     it('should delete a blog post', async () => {
+      // Mock the SELECT query to get content
+      mockPool.query.mockResolvedValueOnce({
+        rows: [{ id: '1', content: 'Some content with https://test.supabase.co/storage/v1/object/public/blog-images/123-image.jpg' }],
+      });
+      // Mock the DELETE query
       mockPool.query.mockResolvedValueOnce({
         rows: [{ id: '1', title: 'Deleted Post' }],
       });
@@ -292,6 +301,7 @@ describe('Admin Blog Routes Tests', () => {
         .expect(200);
 
       expect(response.body.message).toBe('Blog post deleted successfully');
+      expect(mockDeleteImage).toHaveBeenCalledWith('123-image.jpg');
     });
 
     it('should return 404 for non-existent post', async () => {

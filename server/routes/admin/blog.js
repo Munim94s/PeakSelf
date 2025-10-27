@@ -3,7 +3,7 @@ import pool, { checkDatabaseAvailability } from '../../utils/db.js';
 import { requireAdmin } from '../../middleware/auth.js';
 import logger from '../../utils/logger.js';
 import multer from 'multer';
-import { uploadImage } from '../../utils/supabase.js';
+import { uploadImage, deleteImage } from '../../utils/supabase.js';
 import { validateCsrfToken } from '../../middleware/csrf.js';
 
 const router = express.Router();
@@ -134,14 +134,45 @@ router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
-    const result = await pool.query(
-      'DELETE FROM blog_posts WHERE id = $1 RETURNING *',
+    // First, get the blog post to extract image paths from content
+    const postResult = await pool.query(
+      'SELECT content FROM blog_posts WHERE id = $1',
       [id]
     );
 
-    if (result.rows.length === 0) {
+    if (postResult.rows.length === 0) {
       return res.status(404).json({ error: 'Blog post not found' });
     }
+
+    const content = postResult.rows[0].content;
+
+    // Delete the blog post from database
+    await pool.query(
+      'DELETE FROM blog_posts WHERE id = $1',
+      [id]
+    );
+
+    // Extract and delete images from Supabase
+    // Look for Supabase image URLs in the content (format: https://...supabase.co/storage/v1/object/public/blog-images/...)
+    const imageUrlPattern = /https:\/\/[^\s]+\.supabase\.co\/storage\/v1\/object\/public\/blog-images\/([^\s"')]+)/g;
+    const matches = content.matchAll(imageUrlPattern);
+    
+    const deletePromises = [];
+    for (const match of matches) {
+      const imagePath = match[1]; // Extract the file path from the URL
+      try {
+        deletePromises.push(deleteImage(imagePath));
+        logger.info(`Deleting image: ${imagePath}`);
+      } catch (error) {
+        // Log but don't fail the entire deletion if image deletion fails
+        logger.warn(`Failed to delete image ${imagePath}:`, error.message);
+      }
+    }
+
+    // Wait for all image deletions (but don't block the response)
+    Promise.all(deletePromises).catch(err => {
+      logger.error('Some images failed to delete:', err);
+    });
 
     res.json({ message: 'Blog post deleted successfully' });
   } catch (error) {
