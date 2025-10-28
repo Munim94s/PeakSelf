@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Users, UserCheck, Mail, Instagram, Facebook, Youtube, Globe, ExternalLink, TrendingUp } from 'lucide-react';
 import { apiClient, endpoints, response } from '../api';
+import LoadingSpinner from './LoadingSpinner';
 import './AdminContent.css';
 import './AdminSessions.css';
 
@@ -25,7 +26,7 @@ export default function AdminOverview() {
     return () => { cancelled = true; };
   }, []);
 
-  if (loading) return <div style={{ padding: '1rem' }}>Loading overview…</div>;
+  if (loading) return <LoadingSpinner text="Loading overview..." fullHeight={false} />;
   if (error) return <div style={{ padding: '1rem', color: '#b91c1c' }}>Error: {error}</div>;
 
   const d = data || {};

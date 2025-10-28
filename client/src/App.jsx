@@ -3,6 +3,7 @@ import { Routes, Route, useLocation } from 'react-router-dom';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import Tracker from './components/Tracker';
+import LoadingSpinner from './components/LoadingSpinner';
 import './App.css';
 
 // Eagerly load only the home page (most common entry point)
@@ -20,31 +21,6 @@ const Admin = lazy(() => import('./pages/Admin'));
 const NotAccessible = lazy(() => import('./pages/NotAccessible'));
 const RateLimit = lazy(() => import('./pages/RateLimit'));
 
-// Loading fallback component
-const LoadingFallback = () => (
-  <div style={{
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    minHeight: '60vh',
-    fontSize: '1.2rem',
-    color: '#666'
-  }}>
-    <div>
-      <div style={{ marginBottom: '1rem', textAlign: 'center' }}>Loading...</div>
-      <div style={{
-        width: '50px',
-        height: '50px',
-        border: '3px solid #f3f3f3',
-        borderTop: '3px solid #3498db',
-        borderRadius: '50%',
-        margin: '0 auto',
-        animation: 'spin 1s linear infinite'
-      }} />
-    </div>
-  </div>
-);
-
 function App() {
   const location = useLocation();
   const hideFooter = location.pathname.startsWith('/admin');
@@ -54,7 +30,7 @@ function App() {
       <Header />
       <Tracker />
       <main>
-        <Suspense fallback={<LoadingFallback />}>
+        <Suspense fallback={<LoadingSpinner />}>
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/blog" element={<Blog />} />
