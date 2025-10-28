@@ -4,6 +4,7 @@ import Header from './components/Header';
 import Footer from './components/Footer';
 import Tracker from './components/Tracker';
 import LoadingSpinner from './components/LoadingSpinner';
+import BrandedLoadingScreen from './components/BrandedLoadingScreen';
 import './App.css';
 
 // Eagerly load only the home page (most common entry point)
@@ -24,13 +25,14 @@ const RateLimit = lazy(() => import('./pages/RateLimit'));
 function App() {
   const location = useLocation();
   const hideFooter = location.pathname.startsWith('/admin');
+  const isAdminRoute = location.pathname.startsWith('/admin');
   
   return (
     <div className="app">
       <Header />
       <Tracker />
       <main>
-        <Suspense fallback={<LoadingSpinner />}>
+        <Suspense fallback={isAdminRoute ? <BrandedLoadingScreen /> : <LoadingSpinner />}>
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/blog" element={<Blog />} />

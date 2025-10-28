@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { apiClient, endpoints, withQuery, response } from '../api';
+import SkeletonGrid from './SkeletonGrid';
 import './AdminSessions.css';
 
 // Custom hook for animated counters
@@ -324,7 +325,18 @@ async function loadEvents(nextPage = 0) {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  if (loading) return <div style={{ padding: 16 }}>Loading traffic…</div>;
+  if (loading) return (
+    <div className="admin-traffic">
+      <div className="traffic-toolbar">
+        <div className="toolbar-top">
+          <div className="title">Traffic overview</div>
+        </div>
+      </div>
+      <div style={{ padding: 16 }}>
+        <SkeletonGrid cards={5} type="stat" />
+      </div>
+    </div>
+  );
   if (error) return <div style={{ padding: 16, color: '#b91c1c' }}>Error: {error}</div>;
 
 return (

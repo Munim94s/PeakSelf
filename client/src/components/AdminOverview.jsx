@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Users, UserCheck, Mail, Instagram, Facebook, Youtube, Globe, ExternalLink, TrendingUp } from 'lucide-react';
 import { apiClient, endpoints, response } from '../api';
-import LoadingSpinner from './LoadingSpinner';
+import SkeletonGrid from './SkeletonGrid';
 import './AdminContent.css';
 import './AdminSessions.css';
 
@@ -26,7 +26,16 @@ export default function AdminOverview() {
     return () => { cancelled = true; };
   }, []);
 
-  if (loading) return <LoadingSpinner text="Loading overview..." fullHeight={false} />;
+  if (loading) return (
+    <div className="admin-content">
+      <div className="traffic-toolbar">
+        <div className="toolbar-top">
+          <div className="title">Overview</div>
+        </div>
+      </div>
+      <SkeletonGrid cards={8} type="stat" />
+    </div>
+  );
   if (error) return <div style={{ padding: '1rem', color: '#b91c1c' }}>Error: {error}</div>;
 
   const d = data || {};

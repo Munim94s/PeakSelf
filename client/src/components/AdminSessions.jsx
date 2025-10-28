@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { apiClient, endpoints, withQuery, response } from '../api';
+import SkeletonSessionCards from './SkeletonSessionCards';
 import './AdminSessions.css';
 
 function formatTime(ts) {
@@ -124,7 +125,16 @@ export default function AdminSessions() {
   useEffect(() => { loadSessions(0); /* eslint-disable-line */ }, []);
   useEffect(() => { loadSessions(0); /* eslint-disable-line */ }, [filterSource]);
 
-  if (loading) return <div style={{ padding: 16 }}>Loading sessions…</div>;
+  if (loading) return (
+    <div className="admin-traffic">
+      <div className="traffic-toolbar">
+        <div className="toolbar-top">
+          <div className="title">Sessions</div>
+        </div>
+      </div>
+      <SkeletonSessionCards count={8} />
+    </div>
+  );
   if (error) return <div style={{ padding: 16, color: '#b91c1c' }}>Error: {error}</div>;
 
   const isEnded = (s) => (s.ended_at || (Date.now() - new Date(s.last_seen_at).getTime() > 30*60*1000));

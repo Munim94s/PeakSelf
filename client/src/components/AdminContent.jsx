@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import ContentEditor from './ContentEditor';
+import SkeletonGrid from './SkeletonGrid';
 import { apiClient, endpoints, response } from '../api';
 import './AdminContent.css';
 import './AdminSessions.css';
@@ -68,7 +69,16 @@ export default function AdminContent() {
     }
   };
 
-  if (loading) return <div style={{padding: '2rem'}}>Loading posts...</div>;
+  if (loading) return (
+    <div className="admin-content">
+      <div className="traffic-toolbar">
+        <div className="toolbar-top">
+          <div className="title">Content</div>
+        </div>
+      </div>
+      <SkeletonGrid cards={6} type="content" />
+    </div>
+  );
   if (error) return <div style={{padding: '2rem', color: '#b91c1c'}}>Error: {error}</div>;
 
   return (

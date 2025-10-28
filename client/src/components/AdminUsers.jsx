@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { apiClient, endpoints, withQuery, response } from '../api';
+import SkeletonTable from './SkeletonTable';
 import './AdminUsers.css';
 import './AdminSessions.css';
 
@@ -151,7 +152,7 @@ export default function AdminUsers() {
         </div>
       </div>
 
-      {loading && <div style={{padding: '0.75rem'}}>Loading users...</div>}
+      {loading && <SkeletonTable rows={8} columns={5} />}
       {error && !loading && <div style={{padding: '0.75rem', color: '#b91c1c'}}>Error: {error}</div>}
 
       {!loading && !error && (

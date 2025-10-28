@@ -9,14 +9,12 @@ import AdminContent from '../components/AdminContent';
 import AdminSessions from '../components/AdminSessions';
 
 export default function Admin() {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [user, setUser] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Only check authentication on mount, don't load all data
+  // Check authentication on mount, redirect if unauthorized
   useEffect(() => {
     let cancelled = false;
     async function checkAuth() {
@@ -28,9 +26,7 @@ export default function Admin() {
           window.location.href = '/not-accessible';
           return;
         }
-        if (!cancelled) setError(e.message || 'Failed to authenticate');
-      } finally {
-        if (!cancelled) setLoading(false);
+        // For other errors, still render but user will be null
       }
     }
     checkAuth();
@@ -47,9 +43,6 @@ export default function Admin() {
     ];
     return base;
   }, []);
-
-  if (loading) return <div style={{padding: '2rem'}}>Loading admin...</div>;
-  if (error) return <div style={{padding: '2rem', color: '#b91c1c'}}>Error: {error}</div>;
 
   // Get current active section from URL
   const currentPath = location.pathname;
