@@ -1,19 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Search, X } from 'lucide-react';
 import './SearchBar.css';
 
 const SearchBar = ({ onSearch, placeholder = "Search articles..." }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
-  const handleSubmit = (e) => {
+  // Memoize event handlers to prevent unnecessary re-renders
+  const handleSubmit = useCallback((e) => {
     e.preventDefault();
     onSearch(searchTerm);
-  };
+  }, [searchTerm, onSearch]);
 
-  const handleClear = () => {
+  const handleClear = useCallback(() => {
     setSearchTerm('');
     onSearch('');
-  };
+  }, [onSearch]);
 
   return (
     <form onSubmit={handleSubmit} className="search-bar-form">
@@ -44,6 +45,7 @@ const SearchBar = ({ onSearch, placeholder = "Search articles..." }) => {
   );
 };
 
-export default SearchBar;
+// Memoize SearchBar to prevent re-renders when parent re-renders
+export default React.memo(SearchBar);
 
 

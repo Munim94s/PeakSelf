@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { blogPosts, categories } from '../data/blogPosts';
 import PostList from '../components/PostList';
 import SearchBar from '../components/SearchBar';
@@ -29,8 +29,25 @@ const Blog = () => {
     return filtered;
   }, [searchTerm, selectedCategory]);
 
-  const featuredPost = filteredPosts.find(post => post.featured);
-  const regularPosts = filteredPosts.filter(post => !post.featured);
+  // Memoize the separation of featured and regular posts
+  const { featuredPost, regularPosts } = useMemo(() => ({
+    featuredPost: filteredPosts.find(post => post.featured),
+    regularPosts: filteredPosts.filter(post => !post.featured)
+  }), [filteredPosts]);
+
+  // Memoize event handlers to prevent SearchBar re-renders
+  const handleSearch = useCallback((term) => {
+    setSearchTerm(term);
+  }, []);
+
+  const handleCategoryChange = useCallback((category) => {
+    setSelectedCategory(category);
+  }, []);
+
+  const handleClearFilters = useCallback(() => {
+    setSearchTerm('');
+    setSelectedCategory('');
+  }, []);
 
   return (
     <div className="blog-container">
@@ -50,7 +67,7 @@ const Blog = () => {
         <div className="blog-filters">
           <div className="blog-search-container">
             <SearchBar 
-              onSearch={setSearchTerm}
+              onSearch={handleSearch}
               placeholder="Search articles, tags, or topics..."
             />
           </div>
@@ -58,7 +75,7 @@ const Blog = () => {
           <CategoryFilter
             categories={categories}
             selectedCategory={selectedCategory}
-            onCategoryChange={setSelectedCategory}
+            onCategoryChange={handleCategoryChange}
           />
         </div>
 
@@ -85,10 +102,7 @@ const Blog = () => {
               Try adjusting your search terms or browse different categories
             </p>
             <button
-              onClick={() => {
-                setSearchTerm('');
-                setSelectedCategory('');
-              }}
+              onClick={handleClearFilters}
               className="blog-clear-filters-btn"
             >
               Clear Filters

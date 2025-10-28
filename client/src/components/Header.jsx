@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, Search } from 'lucide-react';
 import { apiClient, endpoints, auth as apiAuth, response } from '../api';
@@ -39,9 +39,9 @@ const Header = () => {
     }
   }, [location.pathname, user, loading]);
 
-  const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
-  };
+  const toggleMenu = useCallback(() => {
+    setIsMenuOpen(prev => !prev);
+  }, []);
 
   // Close menu when route changes
   useEffect(() => {
@@ -71,7 +71,7 @@ const Header = () => {
     return () => document.removeEventListener('click', onDocClick);
   }, [userMenuOpen]);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     console.log('🔴 Frontend: Logout clicked');
     try {
       await apiClient.post(endpoints.auth.logout);
@@ -86,7 +86,7 @@ const Header = () => {
       setUser(null);
       window.location.href = '/';
     }
-  };
+  }, []);
 
   const initialsFrom = (nameOrEmail) => {
     if (!nameOrEmail) return 'U';

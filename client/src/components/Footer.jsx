@@ -83,5 +83,6 @@ const Footer = () => {
   );
 };
 
-export default Footer;
+// Memoize Footer since it's static content and rendered on most pages
+export default React.memo(Footer);
 

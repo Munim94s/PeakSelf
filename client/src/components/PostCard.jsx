@@ -1,22 +1,23 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, Clock, User, ArrowRight } from 'lucide-react';
 import './PostCard.css';
 
 const PostCard = ({ post, featured = false, showMeta = true }) => {
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+  // Memoize expensive computations
+  const formattedDate = useMemo(() => {
+    return new Date(post.publishedAt).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric'
     });
-  };
+  }, [post.publishedAt]);
 
-  const getReadingTime = (content) => {
+  const readingTime = useMemo(() => {
     const wordsPerMinute = 200;
-    const wordCount = content.split(' ').length;
+    const wordCount = post.content.split(' ').length;
     return Math.ceil(wordCount / wordsPerMinute);
-  };
+  }, [post.content]);
 
   return (
     <article className="post-card">
@@ -41,13 +42,13 @@ const PostCard = ({ post, featured = false, showMeta = true }) => {
             <div className="post-card-meta-item">
               <Calendar className="post-card-meta-icon" />
               <span className="post-card-meta-text">
-                {formatDate(post.publishedAt)}
+                {formattedDate}
               </span>
             </div>
             <div className="post-card-meta-item">
               <Clock className="post-card-meta-icon" />
               <span className="post-card-meta-text">
-                {getReadingTime(post.content)} min read
+                {readingTime} min read
               </span>
             </div>
             <div className="post-card-meta-item">
@@ -88,5 +89,6 @@ const PostCard = ({ post, featured = false, showMeta = true }) => {
   );
 };
 
-export default PostCard;
+// Memoize PostCard to prevent re-renders when props don't change
+export default React.memo(PostCard);
 
