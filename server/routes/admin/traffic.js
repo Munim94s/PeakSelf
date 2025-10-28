@@ -1,12 +1,22 @@
 import express from "express";
 import pool from "../../utils/db.js";
 import { normalizeRange } from "../../utils/dateUtils.js";
+import cache, { CACHE_KEYS, CACHE_CONFIG } from "../../utils/cache.js";
 
 const router = express.Router();
 
 // Traffic summary (aggregates) - uses snapshot if present, else live
 router.get('/summary', async (req, res) => {
   try {
+    const norm = normalizeRange(req.query.range, 7);
+    const cacheKey = CACHE_KEYS.TRAFFIC_SUMMARY(norm.label);
+    
+    // Check cache first
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return res.json({ ...cached, cached: true });
+    }
+
     const snap = await pool.query(
       `SELECT snapshot_at,
               total_users, verified_users, signups_24h,
@@ -14,9 +24,11 @@ router.get('/summary', async (req, res) => {
               traffic_instagram, traffic_facebook, traffic_youtube, traffic_google, traffic_others, traffic_others_refs
        FROM dashboard_overview_latest`
     );
-    if (snap.rows[0]) return res.json({ source: 'snapshot', ...snap.rows[0] });
-
-    const norm = normalizeRange(req.query.range, 7);
+    if (snap.rows[0]) {
+      const result = { source: 'snapshot', ...snap.rows[0] };
+      cache.set(cacheKey, result, CACHE_CONFIG.TRAFFIC_SUMMARY);
+      return res.json(result);
+    }
 
     const live = await pool.query(
       `WITH
@@ -59,7 +71,9 @@ router.get('/summary', async (req, res) => {
       [norm.interval.split(' ')[0], norm.interval.split(' ')[0]]);
 
     const data = live.rows[0] || {};
-    return res.json({ source: 'live', range: norm.label, snapshot_at: new Date().toISOString(), ...data });
+    const result = { source: 'live', range: norm.label, snapshot_at: new Date().toISOString(), ...data };
+    cache.set(cacheKey, result, CACHE_CONFIG.TRAFFIC_SUMMARY);
+    return res.json(result);
   } catch (e) {
     console.error('Traffic summary error:', e);
     return res.status(500).json({ error: 'Failed to fetch traffic summary' });

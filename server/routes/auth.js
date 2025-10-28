@@ -9,6 +9,7 @@ import logger from "../utils/logger.js";
 import pool, { isDatabaseAvailable, checkDatabaseAvailability } from "../utils/db.js";
 import { authPasswordLimiter, authOAuthLimiter, authGeneralLimiter } from "../middleware/rateLimiter.js";
 import { verifyJwt as verifyJwtHelper } from "../middleware/auth.js";
+import { invalidate } from "../utils/cache.js";
 import { 
   COOKIE_JWT_MAX_AGE, 
   JWT_EXPIRATION, 
@@ -179,6 +180,9 @@ if (isGoogleEnabled()) {
         [email, googleId, displayName, avatarUrl]
       );
       const user = insert.rows[0];
+      // Invalidate user and dashboard caches
+      invalidate.users();
+      invalidate.dashboard();
       return done(null, user);
     } catch (e) {
       return done(e);
@@ -395,6 +399,9 @@ router.get("/verify-email", authGeneralLimiter, async (req, res) => {
           [pending.email.toLowerCase(), pending.password_hash, pending.name]
         );
         user = newUser.rows[0];
+        // Invalidate user and dashboard caches
+        invalidate.users();
+        invalidate.dashboard();
       }
       
       // Delete the pending registration

@@ -1,6 +1,7 @@
 import express from "express";
 import pool from "../../utils/db.js";
 import { normalizeRange } from "../../utils/dateUtils.js";
+import cache, { CACHE_KEYS, CACHE_CONFIG } from "../../utils/cache.js";
 
 const router = express.Router();
 
@@ -26,6 +27,12 @@ router.get('/', async (req, res) => {
 // Dashboard: latest snapshot (with live fallback if table empty)
 router.get('/overview', async (req, res) => {
   try {
+    // Check cache first
+    const cached = cache.get(CACHE_KEYS.DASHBOARD_METRICS);
+    if (cached) {
+      return res.json({ ...cached, cached: true });
+    }
+
     // Try the materialized snapshot first
     try {
       const snap = await pool.query(
@@ -36,7 +43,9 @@ router.get('/overview', async (req, res) => {
          FROM dashboard_overview_latest`
       );
       if (snap.rows[0]) {
-        return res.json({ source: 'snapshot', ...snap.rows[0] });
+        const result = { source: 'snapshot', ...snap.rows[0] };
+        cache.set(CACHE_KEYS.DASHBOARD_METRICS, result, CACHE_CONFIG.DASHBOARD_METRICS);
+        return res.json(result);
       }
     } catch (snapError) {
       // View doesn't exist or has missing columns - fall back to live query
@@ -84,7 +93,9 @@ router.get('/overview', async (req, res) => {
              otr.sessions_others_refs
         FROM u, n, sess, otr`);
 
-    return res.json({ source: 'live', snapshot_at: new Date().toISOString(), ...live.rows[0] });
+    const result = { source: 'live', snapshot_at: new Date().toISOString(), ...live.rows[0] };
+    cache.set(CACHE_KEYS.DASHBOARD_METRICS, result, CACHE_CONFIG.DASHBOARD_METRICS);
+    return res.json(result);
   } catch (e) {
     console.error('Dashboard fetch error:', e);
     return res.status(500).json({ error: 'Failed to fetch dashboard' });

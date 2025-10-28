@@ -1,5 +1,6 @@
 import express from "express";
 import pool from "../../utils/db.js";
+import cache, { CACHE_KEYS, CACHE_CONFIG } from "../../utils/cache.js";
 
 const router = express.Router();
 
@@ -11,6 +12,17 @@ router.get('/', async (req, res) => {
     const source = String(req.query.source || '').trim().toLowerCase();
     const userId = String(req.query.user_id || '').trim();
     const visitorId = String(req.query.visitor_id || '').trim();
+
+    // Only cache the first page of unfiltered recent sessions
+    const shouldCache = !source && !userId && !visitorId && offset === 0 && limit === 50;
+    const cacheKey = CACHE_KEYS.RECENT_SESSIONS;
+    
+    if (shouldCache) {
+      const cached = cache.get(cacheKey);
+      if (cached) {
+        return res.json({ ...cached, cached: true });
+      }
+    }
 
     const wheres = [];
     const params = [];
@@ -46,7 +58,11 @@ router.get('/', async (req, res) => {
       params
     );
 
-    res.json({ sessions: rows });
+    const result = { sessions: rows };
+    if (shouldCache) {
+      cache.set(cacheKey, result, CACHE_CONFIG.SESSION_STATS);
+    }
+    res.json(result);
   } catch (e) {
     console.error('Sessions list error:', e);
     return res.status(500).json({ error: 'Failed to fetch sessions' });

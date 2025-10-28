@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import nodemailer from "nodemailer";
 import pool from "../../utils/db.js";
 import { EMAIL_VERIFICATION_EXPIRATION_MS } from "../../constants.js";
+import { invalidate } from "../../utils/cache.js";
 
 const router = express.Router();
 
@@ -87,6 +88,9 @@ router.post('/:id/make-admin', async (req, res) => {
       [id]
     );
     if (!rows[0]) return res.status(404).json({ error: 'User not found' });
+    // Invalidate caches that include user stats
+    invalidate.users();
+    invalidate.dashboard();
     return res.json({ user: rows[0] });
   } catch (e) {
     console.error('Make admin error:', e);
@@ -106,6 +110,9 @@ router.post('/:id/remove-admin', async (req, res) => {
       [id]
     );
     if (!rows[0]) return res.status(404).json({ error: 'User not found or not an admin' });
+    // Invalidate caches that include user stats
+    invalidate.users();
+    invalidate.dashboard();
     return res.json({ user: rows[0] });
   } catch (e) {
     console.error('Remove admin error:', e);
@@ -122,6 +129,9 @@ router.delete('/:id', async (req, res) => {
     }
     const { rowCount } = await pool.query("DELETE FROM users WHERE id::text = $1", [id]);
     if (rowCount === 0) return res.status(404).json({ error: 'User not found' });
+    // Invalidate caches that include user stats
+    invalidate.users();
+    invalidate.dashboard();
     return res.json({ ok: true });
   } catch (e) {
     console.error('Delete user error:', e);

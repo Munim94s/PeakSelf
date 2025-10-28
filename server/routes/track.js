@@ -3,6 +3,7 @@ import { v4 as uuidv4, validate as uuidValidate } from "uuid";
 import logger from "../utils/logger.js";
 import pool from "../utils/db.js";
 import { verifyJwt } from "../middleware/auth.js";
+import { invalidate } from "../utils/cache.js";
 import { 
   TRACKING_COOKIES, 
   COOKIE_VISITOR_MAX_AGE, 
@@ -183,7 +184,7 @@ async function ensureSession(req, res, visitor, source, landingPath, userAgent, 
       await pool.query('UPDATE user_sessions SET user_id = $2 WHERE id = $1', [existing.id, userId]);
     }
     res.cookie(TRACKING_COOKIES.SESSION_ID, existing.id, cookieOpts(false));
-    return existing.id;
+    return { id: existing.id, isNew: false };
   }
 
   // If cookie refers to a stale session, mark it ended before creating a new one
@@ -199,7 +200,7 @@ async function ensureSession(req, res, visitor, source, landingPath, userAgent, 
   );
   const sid = insert.rows[0].id;
   res.cookie(TRACKING_COOKIES.SESSION_ID, sid, cookieOpts(false));
-  return sid;
+  return { id: sid, isNew: true };
 }
 
 router.post('/', async (req, res) => {
@@ -219,7 +220,9 @@ router.post('/', async (req, res) => {
   try {
     // Advanced sessionization path
     const visitor = await ensureVisitor(req, res, source, referrer, path);
-    const sessionId = await ensureSession(req, res, visitor, source, path, userAgent, ip, referrer);
+    const sessionResult = await ensureSession(req, res, visitor, source, path, userAgent, ip, referrer);
+    const sessionId = sessionResult.id || sessionResult; // Handle both old and new format
+    const isNewSession = sessionResult.isNew || false;
 
     // Record ordered navigation event
     await pool.query(
@@ -236,6 +239,14 @@ router.post('/', async (req, res) => {
         `INSERT INTO traffic_events (occurred_at, source, referrer, path, user_agent, ip) VALUES (NOW(), $1, $2, $3, $4, $5)`,
         [source, referrer, path || '/', userAgent, ip]
       );
+      // Only invalidate caches on new sessions or periodically (to avoid invalidating on every page view)
+      // Traffic cache can handle some staleness for performance
+      if (isNewSession) {
+        invalidate.sessions();
+        invalidate.dashboard();
+      }
+      // Invalidate traffic cache less aggressively (it has shorter TTL anyway)
+      // Could add: if (Math.random() < 0.1) invalidate.traffic(); for 10% sampling
     } catch (e2) {
       logger.warn('Warning: failed to insert traffic_events (continuing):', e2.message);
     }
