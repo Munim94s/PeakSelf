@@ -1,4 +1,5 @@
 import { apiFetch, resetCsrfToken } from '../utils/api';
+import { API_BASE } from '../config';
 
 /**
  * Custom API Error class for better error handling
@@ -28,7 +29,7 @@ export class APIError extends Error {
  * API Client Configuration
  */
 const config = {
-  baseURL: import.meta.env.VITE_API_BASE || 'http://localhost:5000',
+  baseURL: API_BASE,
   timeout: 30000, // 30 seconds
   retryAttempts: 2,
   retryDelay: 1000, // 1 second

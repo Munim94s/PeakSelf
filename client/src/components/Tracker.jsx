@@ -1,8 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { apiFetch } from '../utils/api';
-
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
+import { API_BASE } from '../config';
 
 export default function Tracker() {
   const location = useLocation();
