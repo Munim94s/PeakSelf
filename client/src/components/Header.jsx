@@ -1,10 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, Search } from 'lucide-react';
-import { apiFetch, resetCsrfToken } from '../utils/api';
+import { apiClient, endpoints, auth as apiAuth, response } from '../api';
 import './Header.css';
-
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
 
 const Header = () => {
   const location = useLocation();
@@ -16,8 +14,7 @@ const Header = () => {
   // Fetch user function (reusable)
   const fetchMe = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/auth/me`, { credentials: 'include' });
-      const data = await res.json();
+      const { data } = await apiClient.get(endpoints.auth.me);
       setUser(data.user);
       setLoading(false);
     } catch (_) {
@@ -77,19 +74,15 @@ const Header = () => {
   const logout = async () => {
     console.log('🔴 Frontend: Logout clicked');
     try {
-      console.log('   Making logout request to:', `${API_BASE}/api/auth/logout`);
-      const res = await apiFetch(`${API_BASE}/api/auth/logout`, { method: 'POST' });
-      console.log('   Logout response status:', res.status);
-      const data = await res.json();
-      console.log('   Logout response:', data);
-      resetCsrfToken(); // Clear CSRF token cache
+      await apiClient.post(endpoints.auth.logout);
+      apiAuth.logout(); // Clear CSRF token and auth state
       setUser(null);
       console.log('   User state cleared, redirecting to /');
       window.location.href = '/';
     } catch (err) {
       console.error('   ❌ Logout error:', err);
       // Still clear user and redirect even on error
-      resetCsrfToken();
+      apiAuth.logout();
       setUser(null);
       window.location.href = '/';
     }

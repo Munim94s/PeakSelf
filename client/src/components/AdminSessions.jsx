@@ -1,8 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { apiFetch } from '../utils/api';
+import { apiClient, endpoints, withQuery, response } from '../api';
 import './AdminSessions.css';
-
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
 
 function formatTime(ts) {
   const date = new Date(ts);
@@ -88,20 +86,18 @@ export default function AdminSessions() {
   async function loadSessions(nextPage = 0) {
     try {
       setLoading(true);
-      const params = new URLSearchParams();
-      if (filterSource) params.set('source', filterSource);
-      if (filterUserId) params.set('user_id', filterUserId);
-      if (filterVisitorId) params.set('visitor_id', filterVisitorId);
-      params.set('limit', '50');
-      params.set('offset', String(nextPage * 50));
-      const res = await apiFetch(`${API_BASE}/api/admin/sessions?${params.toString()}`, {});
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Failed to load sessions');
-      setSessions(Array.isArray(json.sessions) ? json.sessions : []);
+      const params = {};
+      if (filterSource) params.source = filterSource;
+      if (filterUserId) params.user_id = filterUserId;
+      if (filterVisitorId) params.visitor_id = filterVisitorId;
+      params.limit = '50';
+      params.offset = String(nextPage * 50);
+      const { data } = await apiClient.get(withQuery(endpoints.admin.sessions, params));
+      setSessions(Array.isArray(data.sessions) ? data.sessions : []);
       setPage(nextPage);
       setError('');
     } catch (e) {
-      setError(e.message || 'Failed to load sessions');
+      setError(response.getErrorMessage(e));
       setSessions([]);
     } finally {
       setLoading(false);
@@ -114,18 +110,14 @@ export default function AdminSessions() {
       setModalOpen(true);
       setDetail(null);
       setEvents([]);
-      const [res1, res2] = await Promise.all([
-        apiFetch(`${API_BASE}/api/admin/sessions/${id}`, {}),
-        apiFetch(`${API_BASE}/api/admin/sessions/${id}/events`, {})
+      const [result1, result2] = await Promise.all([
+        apiClient.get(endpoints.admin.sessionById(id)),
+        apiClient.get(endpoints.admin.sessionEvents(id))
       ]);
-      const json1 = await res1.json();
-      const json2 = await res2.json();
-      if (!res1.ok) throw new Error(json1.error || 'Failed to load session');
-      if (!res2.ok) throw new Error(json2.error || 'Failed to load events');
-      setDetail(json1.session || null);
-      setEvents(Array.isArray(json2.events) ? json2.events : []);
+      setDetail(result1.data.session || null);
+      setEvents(Array.isArray(result2.data.events) ? result2.data.events : []);
     } catch (e) {
-      setError(e.message || 'Failed to load session');
+      setError(response.getErrorMessage(e));
     }
   }
 

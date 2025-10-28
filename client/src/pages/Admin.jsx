@@ -1,14 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { BarChart3, Users as UsersIcon, FileText, Settings as SettingsIcon, Activity, Menu, X } from 'lucide-react';
-import { apiFetch } from '../utils/api';
+import { apiClient, endpoints, auth as apiAuth } from '../api';
 import AdminSettings from '../components/AdminSettings';
 import AdminOverview from '../components/AdminOverview';
 import AdminUsers from '../components/AdminUsers';
 import AdminContent from '../components/AdminContent';
 import AdminSessions from '../components/AdminSessions';
-
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
 
 export default function Admin() {
   const [loading, setLoading] = useState(true);
@@ -23,15 +21,13 @@ export default function Admin() {
     let cancelled = false;
     async function checkAuth() {
       try {
-        const res = await apiFetch(`${API_BASE}/api/admin`, {});
-        if (res.status === 401 || res.status === 403) {
+        const { data } = await apiClient.get(endpoints.admin.dashboard);
+        if (!cancelled) setUser(data.user);
+      } catch (e) {
+        if (apiAuth.isAuthError(e)) {
           window.location.href = '/not-accessible';
           return;
         }
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.error || 'Failed to authenticate');
-        if (!cancelled) setUser(json.user);
-      } catch (e) {
         if (!cancelled) setError(e.message || 'Failed to authenticate');
       } finally {
         if (!cancelled) setLoading(false);

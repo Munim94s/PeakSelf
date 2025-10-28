@@ -17,11 +17,47 @@ jest.unstable_mockModule('../../../utils/dateUtils.js', () => ({
   normalizeRange: jest.fn(() => ({ interval: '7 days', label: 'last 7 days' })),
 }));
 
+jest.unstable_mockModule('../../../utils/cache.js', () => ({
+  default: {
+    get: jest.fn(() => undefined),
+    set: jest.fn(),
+    del: jest.fn(),
+    delMultiple: jest.fn(),
+    flush: jest.fn(),
+    flushPattern: jest.fn(),
+    getStats: jest.fn(),
+    wrap: jest.fn(),
+    invalidate: {
+      dashboard: jest.fn(),
+      traffic: jest.fn(),
+      users: jest.fn(),
+      sessions: jest.fn(),
+      all: jest.fn(),
+    },
+    CACHE_KEYS: {
+      TRAFFIC_SUMMARY: (range) => `traffic:summary:${range}`,
+    },
+    CACHE_CONFIG: {
+      TRAFFIC_SUMMARY: 60,
+    },
+  },
+  CACHE_KEYS: {
+    TRAFFIC_SUMMARY: (range) => `traffic:summary:${range}`,
+  },
+  CACHE_CONFIG: {
+    TRAFFIC_SUMMARY: 60,
+  },
+}));
+
 describe('Admin Sessions and Traffic Routes Tests', () => {
   let app;
   let adminToken;
+  let normalizeRangeMock;
 
   beforeAll(async () => {
+    const { normalizeRange } = await import('../../../utils/dateUtils.js');
+    normalizeRangeMock = normalizeRange;
+    
     app = express();
     app.use(express.json());
     app.use(cookieParser());
@@ -39,10 +75,12 @@ describe('Admin Sessions and Traffic Routes Tests', () => {
 
     adminToken = jwt.sign({ sub: 'admin-123', email: 'admin@test.com', role: 'admin' }, process.env.JWT_SECRET);
   });
-
+  
   beforeEach(() => {
-    jest.clearAllMocks();
+    // Reset normalizeRange mock implementation after each test
+    normalizeRangeMock.mockImplementation(() => ({ interval: '7 days', label: 'last 7 days' }));
   });
+
 
   describe('Sessions Routes', () => {
     describe('GET /api/admin/sessions', () => {
@@ -170,6 +208,14 @@ describe('Admin Sessions and Traffic Routes Tests', () => {
             total_users: 100,
             traffic_instagram: 50,
             traffic_google: 30,
+            verified_users: 80,
+            signups_24h: 5,
+            newsletter_total: 50,
+            newsletter_signups_24h: 2,
+            traffic_facebook: 20,
+            traffic_youtube: 15,
+            traffic_others: 10,
+            traffic_others_refs: [],
           }],
         });
 

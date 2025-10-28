@@ -16,6 +16,38 @@ jest.unstable_mockModule('../../../utils/dateUtils.js', () => ({
   normalizeRange: jest.fn((range, fallback) => ({ interval: '7 days', label: 'last 7 days' })),
 }));
 
+jest.unstable_mockModule('../../../utils/cache.js', () => ({
+  default: {
+    get: jest.fn(() => undefined),
+    set: jest.fn(),
+    del: jest.fn(),
+    delMultiple: jest.fn(),
+    flush: jest.fn(),
+    flushPattern: jest.fn(),
+    getStats: jest.fn(),
+    wrap: jest.fn(),
+    invalidate: {
+      dashboard: jest.fn(),
+      traffic: jest.fn(),
+      users: jest.fn(),
+      sessions: jest.fn(),
+      all: jest.fn(),
+    },
+    CACHE_KEYS: {
+      DASHBOARD_METRICS: 'dashboard:metrics',
+    },
+    CACHE_CONFIG: {
+      DASHBOARD_METRICS: 60,
+    },
+  },
+  CACHE_KEYS: {
+    DASHBOARD_METRICS: 'dashboard:metrics',
+  },
+  CACHE_CONFIG: {
+    DASHBOARD_METRICS: 60,
+  },
+}));
+
 describe('Admin Dashboard Routes Tests', () => {
   let app;
   let adminToken;

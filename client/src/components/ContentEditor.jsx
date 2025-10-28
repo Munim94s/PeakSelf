@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Bold, Italic, Underline, Link as LinkIcon, Image } from 'lucide-react';
-import { apiFetch } from '../utils/api';
+import { apiClient, endpoints } from '../api';
 import './ContentEditor.css';
 
 export default function ContentEditor({ onSave, onCancel, initialPost }) {
@@ -104,27 +104,13 @@ export default function ContentEditor({ onSave, onCancel, initialPost }) {
           formData.append('image', file);
           
           console.log('Uploading to server...');
-          const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
-          const response = await apiFetch(`${API_BASE}/api/admin/blog/upload-image`, {
-            method: 'POST',
-            body: formData
-          });
-          
-          console.log('Upload response status:', response.status);
-          
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-            console.error('Upload failed:', errorData);
-            throw new Error(errorData.error || 'Failed to upload image');
-          }
-          
-          const { url } = await response.json();
-          console.log('Upload successful, image URL:', url);
+          const { data } = await apiClient.upload(endpoints.blog.uploadImage, formData);
+          console.log('Upload successful, image URL:', data.url);
           
           // Replace temp image with actual URL
           const tempWrapper = editorRef.current.querySelector('.image-wrapper[data-temp="true"]');
           if (tempWrapper) {
-            const imageHTML = `<div class="image-wrapper" contenteditable="false"><img src="${url}" class="blog-image" alt="Blog image" /></div><p><br></p>`;
+            const imageHTML = `<div class="image-wrapper" contenteditable="false"><img src="${data.url}" class="blog-image" alt="Blog image" /></div><p><br></p>`;
             tempWrapper.outerHTML = imageHTML;
             console.log('Image inserted successfully');
           } else {

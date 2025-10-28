@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { apiFetch } from '../utils/api';
+import { apiClient, endpoints, response } from '../api';
 import './Login.css';
-
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -34,22 +32,16 @@ export default function Login() {
     e.preventDefault();
     setMsg('');
     try {
-      const res = await apiFetch(`${API_BASE}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Login failed');
+      await apiClient.post(endpoints.auth.login, { email, password });
       // Redirect to home page after successful login
       navigate('/');
     } catch (err) {
-      setMsg(err.message);
+      setMsg(response.getErrorMessage(err));
     }
   };
 
   const googleLogin = () => {
-    window.location.href = `${API_BASE}/api/auth/google`;
+    window.location.href = endpoints.auth.googleAuth;
   };
 
   return (

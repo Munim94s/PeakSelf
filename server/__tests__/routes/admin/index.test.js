@@ -39,11 +39,57 @@ jest.unstable_mockModule('../../../middleware/auth.js', () => ({
   getCurrentUser: jest.fn(() => null),
 }));
 
+jest.unstable_mockModule('../../../utils/cache.js', () => ({
+  default: {
+    get: jest.fn(() => undefined),
+    set: jest.fn(),
+    del: jest.fn(),
+    delMultiple: jest.fn(),
+    flush: jest.fn(),
+    flushPattern: jest.fn(),
+    getStats: jest.fn(),
+    wrap: jest.fn(),
+    invalidate: {
+      dashboard: jest.fn(),
+      traffic: jest.fn(),
+      users: jest.fn(),
+      sessions: jest.fn(),
+      all: jest.fn(),
+    },
+    CACHE_KEYS: {
+      DASHBOARD_METRICS: 'dashboard:metrics',
+      TRAFFIC_SUMMARY: (range) => `traffic:summary:${range}`,
+    },
+    CACHE_CONFIG: {
+      DASHBOARD_METRICS: 60,
+      TRAFFIC_SUMMARY: 60,
+    },
+  },
+  invalidate: {
+    dashboard: jest.fn(),
+    traffic: jest.fn(),
+    users: jest.fn(),
+    sessions: jest.fn(),
+    all: jest.fn(),
+  },
+  CACHE_KEYS: {
+    DASHBOARD_METRICS: 'dashboard:metrics',
+    TRAFFIC_SUMMARY: (range) => `traffic:summary:${range}`,
+  },
+  CACHE_CONFIG: {
+    DASHBOARD_METRICS: 60,
+    TRAFFIC_SUMMARY: 60,
+  },
+}));
+
 describe('Admin Router Index Tests', () => {
   let app;
   let adminToken;
+  let normalizeRangeMock;
 
   beforeAll(async () => {
+    const { normalizeRange } = await import('../../../utils/dateUtils.js');
+    normalizeRangeMock = normalizeRange;
     app = express();
     app.use(express.json());
     app.use(cookieParser());
@@ -54,10 +100,12 @@ describe('Admin Router Index Tests', () => {
 
     adminToken = jwt.sign({ sub: 'admin-123', email: 'admin@test.com', role: 'admin' }, process.env.JWT_SECRET);
   });
-
+  
   beforeEach(() => {
-    jest.clearAllMocks();
+    // Reset normalizeRange mock implementation after each test
+    normalizeRangeMock.mockImplementation(() => ({ interval: '7 days', label: 'last 7 days' }));
   });
+
 
   describe('Router Mounting', () => {
     it('should mount dashboard router at root path', async () => {

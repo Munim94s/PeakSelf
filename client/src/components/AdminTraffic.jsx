@@ -1,8 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { apiFetch } from '../utils/api';
+import { apiClient, endpoints, withQuery, response } from '../api';
 import './AdminSessions.css';
-
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
 
 // Custom hook for animated counters
 function useAnimatedCounter(end, duration = 1000, delay = 0) {
@@ -238,21 +236,20 @@ export default function AdminTraffic() {
 async function loadEvents(nextPage = 0) {
   try {
     setLoading(true);
-    const params = new URLSearchParams();
-    if (filterSource) params.set('source', filterSource);
-    if (filterRef) params.set('ref', filterRef);
-    if (range) params.set('range', range);
-    params.set('limit', '50');
-    params.set('offset', String(nextPage * 50));
-    const res = await apiFetch(`${API_BASE}/api/admin/traffic/events?${params.toString()}`, {});
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error || 'Failed to load events');
-    setEvents(json.events || []);
-    setTrafficSummary(json.summary || null);
+    const params = {};
+    if (filterSource) params.source = filterSource;
+    if (filterRef) params.ref = filterRef;
+    if (range) params.range = range;
+    params.limit = '50';
+    params.offset = String(nextPage * 50);
+    // Note: Using traffic endpoint (adjust if needed based on actual backend route)
+    const { data } = await apiClient.get(withQuery(endpoints.admin.traffic, params));
+    setEvents(data.events || []);
+    setTrafficSummary(data.summary || null);
     setPage(nextPage);
     setError('');
   } catch (e) {
-    setError(e.message || 'Failed to load events');
+    setError(response.getErrorMessage(e));
   } finally {
     setLoading(false);
   }

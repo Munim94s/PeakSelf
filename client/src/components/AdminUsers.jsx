@@ -1,9 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { apiFetch } from '../utils/api';
+import { apiClient, endpoints, withQuery, response } from '../api';
 import './AdminUsers.css';
 import './AdminSessions.css';
-
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
 
 export default function AdminUsers() {
   const [filter, setFilter] = useState('all');
@@ -16,15 +14,13 @@ export default function AdminUsers() {
     setLoading(true);
     setError('');
     try {
-      const params = new URLSearchParams();
-      if (searchTerm) params.set('q', searchTerm);
-      if (filter && filter !== 'all') params.set('filter', filter);
-      const res = await apiFetch(`${API_BASE}/api/admin/users?${params.toString()}`, {});
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to load users');
+      const params = {};
+      if (searchTerm) params.q = searchTerm;
+      if (filter && filter !== 'all') params.filter = filter;
+      const { data } = await apiClient.get(withQuery(endpoints.admin.users, params));
       setUsers(Array.isArray(data.users) ? data.users : []);
     } catch (e) {
-      setError(e.message || 'Failed to load users');
+      setError(response.getErrorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -39,62 +35,44 @@ export default function AdminUsers() {
     const email = window.prompt('Enter email to invite:');
     if (!email) return;
     try {
-      const res = await apiFetch(`${API_BASE}/api/admin/users/invite`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Invite failed');
+      const { data } = await apiClient.post(endpoints.admin.inviteUser, { email });
       alert(data.message || 'Invitation sent');
       load();
     } catch (e) {
-      alert(e.message || 'Invite failed');
+      alert(response.getErrorMessage(e));
     }
   };
 
   const exportCsv = () => {
     // Open CSV in a new tab; cookies will be sent for same-origin
-    window.open(`${API_BASE}/api/admin/users.csv`, '_blank');
+    window.open(endpoints.admin.usersCSV, '_blank');
   };
 
   const makeAdmin = async (id) => {
     try {
-      const res = await apiFetch(`${API_BASE}/api/admin/users/${encodeURIComponent(id)}/make-admin`, {
-        method: 'POST'
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to promote user');
+      await apiClient.post(endpoints.admin.makeAdmin(id));
       load();
     } catch (e) {
-      alert(e.message || 'Failed to promote user');
+      alert(response.getErrorMessage(e));
     }
   };
 
   const removeAdmin = async (id) => {
     try {
-      const res = await apiFetch(`${API_BASE}/api/admin/users/${encodeURIComponent(id)}/remove-admin`, {
-        method: 'POST'
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to remove admin role');
+      await apiClient.post(endpoints.admin.removeAdmin(id));
       load();
     } catch (e) {
-      alert(e.message || 'Failed to remove admin role');
+      alert(response.getErrorMessage(e));
     }
   };
 
   const removeUser = async (id) => {
-    if (!window.confirm('Are you sure you want to remove this user?')) return;
+    if (!window.confirm('Are you sure you want to delete this user?')) return;
     try {
-      const res = await apiFetch(`${API_BASE}/api/admin/users/${encodeURIComponent(id)}`, {
-        method: 'DELETE'
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to remove user');
+      await apiClient.delete(endpoints.admin.userById(id));
       load();
     } catch (e) {
-      alert(e.message || 'Failed to remove user');
+      alert(response.getErrorMessage(e));
     }
   };
 

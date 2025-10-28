@@ -1,10 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Users, UserCheck, Mail, Instagram, Facebook, Youtube, Globe, ExternalLink, TrendingUp } from 'lucide-react';
-import { apiFetch } from '../utils/api';
+import { apiClient, endpoints, response } from '../api';
 import './AdminContent.css';
 import './AdminSessions.css';
-
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
 
 export default function AdminOverview() {
   const [loading, setLoading] = useState(true);
@@ -15,16 +13,10 @@ export default function AdminOverview() {
     let cancelled = false;
     async function load() {
       try {
-        const res = await apiFetch(`${API_BASE}/api/admin/overview`, {});
-        if (res.status === 401 || res.status === 403) {
-          window.location.href = '/not-accessible';
-          return;
-        }
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.error || 'Failed to load dashboard');
-        if (!cancelled) setData(json);
+        const { data } = await apiClient.get(endpoints.admin.overview);
+        if (!cancelled) setData(data);
       } catch (e) {
-        if (!cancelled) setError(e.message || 'Failed to load dashboard');
+        if (!cancelled) setError(response.getErrorMessage(e));
       } finally {
         if (!cancelled) setLoading(false);
       }

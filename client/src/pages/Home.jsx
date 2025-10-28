@@ -4,7 +4,7 @@ import { ArrowRight, TrendingUp, Users, BookOpen } from 'lucide-react';
 import PostList from '../components/PostList';
 import PostCard from '../components/PostCard';
 import { blogPosts } from '../data/blogPosts';
-import { apiFetch } from '../utils/api';
+import { apiClient, endpoints, response } from '../api';
 import './Home.css';
 
 const Home = () => {
@@ -157,18 +157,11 @@ const Home = () => {
             const email = e.target.email.value;
             if (!email) return;
             try {
-              const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
-              const res = await apiFetch(`${API_BASE}/api/subscribe`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email })
-              });
-              const data = await res.json();
-              if (!res.ok) throw new Error(data.error || 'Subscribe failed');
-              alert('Check your email to confirm your subscription (or server logs in dev).');
+              const { data } = await apiClient.post(endpoints.newsletter.subscribe, { email });
+              alert(data.message || 'Check your email to confirm your subscription.');
               e.target.reset();
             } catch (err) {
-              alert(err.message);
+              alert(response.getErrorMessage(err));
             }
           }}>
             <input

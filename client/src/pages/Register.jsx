@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { apiFetch } from '../utils/api';
-
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
+import { apiClient, endpoints, response } from '../api';
 
 export default function Register() {
   const navigate = useNavigate();
@@ -17,24 +15,18 @@ export default function Register() {
     setMsg('');
     setLoading(true);
     try {
-      const res = await apiFetch(`${API_BASE}/api/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Registration failed');
+      await apiClient.post(endpoints.auth.register, { name, email, password });
       // Redirect to check-email page with the email address
       navigate(`/check-email?email=${encodeURIComponent(email)}`);
     } catch (err) {
-      setMsg(err.message || 'Registration failed');
+      setMsg(response.getErrorMessage(err));
     } finally {
       setLoading(false);
     }
   };
 
   const googleRegister = () => {
-    window.location.href = `${API_BASE}/api/auth/google`;
+    window.location.href = endpoints.auth.googleAuth;
   };
 
   return (

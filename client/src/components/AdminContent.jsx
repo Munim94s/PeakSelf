@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import ContentEditor from './ContentEditor';
-import { apiFetch } from '../utils/api';
+import { apiClient, endpoints, response } from '../api';
 import './AdminContent.css';
 import './AdminSessions.css';
-
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
 
 export default function AdminContent() {
   const [showEditor, setShowEditor] = useState(false);
@@ -22,12 +20,10 @@ export default function AdminContent() {
   const fetchPosts = async () => {
     try {
       setLoading(true);
-      const res = await apiFetch(`${API_BASE}/api/admin/blog`, {});
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to fetch posts');
+      const { data } = await apiClient.get(endpoints.admin.blogPosts);
       setPosts(data.posts);
     } catch (err) {
-      setError(err.message);
+      setError(response.getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -37,29 +33,17 @@ export default function AdminContent() {
     try {
       if (editingPost) {
         // Update existing post
-        const res = await apiFetch(`${API_BASE}/api/admin/blog/${editingPost.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(postData)
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to update post');
+        const { data } = await apiClient.put(endpoints.blog.update(editingPost.id), postData);
         setPosts(posts.map(p => p.id === editingPost.id ? data.post : p));
         setEditingPost(null);
       } else {
         // Create new post
-        const res = await apiFetch(`${API_BASE}/api/admin/blog`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(postData)
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to create post');
+        const { data } = await apiClient.post(endpoints.blog.create, postData);
         setPosts([data.post, ...posts]);
       }
       setShowEditor(false);
     } catch (err) {
-      alert(err.message);
+      alert(response.getErrorMessage(err));
     }
   };
 
@@ -77,16 +61,10 @@ export default function AdminContent() {
     if (!confirm('Are you sure you want to delete this post?')) return;
     
     try {
-      const res = await apiFetch(`${API_BASE}/api/admin/blog/${postId}`, {
-        method: 'DELETE'
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to delete post');
-      }
+      await apiClient.delete(endpoints.blog.delete(postId));
       setPosts(posts.filter(p => p.id !== postId));
     } catch (err) {
-      alert(err.message);
+      alert(response.getErrorMessage(err));
     }
   };
 
