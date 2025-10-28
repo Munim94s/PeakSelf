@@ -379,3 +379,9 @@ main {
   margin-top: 1.5rem;
 }
 
+/* Spinner Animation */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
