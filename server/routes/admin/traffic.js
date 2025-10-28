@@ -34,9 +34,9 @@ router.get('/summary', async (req, res) => {
       `WITH
         u AS (
           SELECT
-            (SELECT COUNT(*) FROM users)::BIGINT AS total_users,
-            (SELECT COUNT(*) FROM users WHERE verified)::BIGINT AS verified_users,
-            (SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '24 hours')::BIGINT AS signups_24h
+            (SELECT COUNT(*) FROM users WHERE deleted_at IS NULL)::BIGINT AS total_users,
+            (SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '24 hours' AND deleted_at IS NULL)::BIGINT AS signups_24h
+        ),
         ),
         n AS (
           SELECT

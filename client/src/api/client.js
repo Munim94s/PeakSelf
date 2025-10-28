@@ -165,9 +165,14 @@ export const apiClient = {
   /**
    * DELETE request
    */
-  async delete(endpoint, options = {}) {
+  async delete(endpoint, body = null, options = {}) {
     return request(endpoint, {
       method: 'DELETE',
+      headers: body ? {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      } : options.headers,
+      body: body ? JSON.stringify(body) : undefined,
       ...options,
     });
   },

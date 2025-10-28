@@ -251,8 +251,41 @@ describe('Admin Users Routes Tests', () => {
     });
   });
 
+  describe('POST /api/admin/users/:id/restore', () => {
+    it('should restore soft-deleted user', async () => {
+      mockPool.query.mockResolvedValueOnce({
+        rows: [
+          { id: 'user-1', email: 'restored@test.com', role: 'user', verified: true, name: 'Restored' },
+        ],
+      });
+
+      const response = await request(app)
+        .post('/api/admin/users/user-1/restore')
+        .set('Cookie', [`access_token=${adminToken}`])
+        .expect(200);
+
+      expect(response.body.user.email).toBe('restored@test.com');
+      expect(response.body.message).toBe('User restored successfully');
+      expect(mockPool.query).toHaveBeenCalledWith(
+        expect.stringContaining('UPDATE users SET deleted_at = NULL'),
+        ['user-1']
+      );
+    });
+
+    it('should return 404 for non-deleted user', async () => {
+      mockPool.query.mockResolvedValueOnce({ rows: [] });
+
+      const response = await request(app)
+        .post('/api/admin/users/user-999/restore')
+        .set('Cookie', [`access_token=${adminToken}`])
+        .expect(404);
+
+      expect(response.body.error).toBe('User not found or not deleted');
+    });
+  });
+
   describe('DELETE /api/admin/users/:id', () => {
-    it('should delete user', async () => {
+    it('should soft delete user', async () => {
       mockPool.query.mockResolvedValueOnce({ rowCount: 1 });
 
       const response = await request(app)
@@ -262,7 +295,7 @@ describe('Admin Users Routes Tests', () => {
 
       expect(response.body.ok).toBe(true);
       expect(mockPool.query).toHaveBeenCalledWith(
-        expect.stringContaining('DELETE FROM users'),
+        expect.stringContaining('UPDATE users SET deleted_at'),
         ['user-1']
       );
     });
@@ -284,7 +317,7 @@ describe('Admin Users Routes Tests', () => {
         .set('Cookie', [`access_token=${adminToken}`])
         .expect(404);
 
-      expect(response.body.error).toBe('User not found');
+      expect(response.body.error).toBe('User not found or already deleted');
     });
   });
 

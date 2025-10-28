@@ -208,7 +208,8 @@ Priority: 🔴 Critical | 🟡 High | 🟢 Medium | 🔵 Low
   ├─ Update queries to exclude soft-deleted records
   ├─ Add admin endpoint to restore soft-deleted users
   └─ Create cleanup script for old soft-deleted records
-  Status: [ ] Not Started
+  Status: [✓] COMPLETED (2025-10-28)
+  Notes: Implemented soft delete with migration, restore endpoint, cleanup script. All 289 tests pass. See SOFT_DELETE.md for details.
   Dependencies: [13]
 
 [🟢 MEDIUM] 15. QUERY RESULT CACHING
@@ -492,14 +493,14 @@ Priority: 🔴 Critical | 🟡 High | 🟢 Medium | 🔵 Low
 
 PHASE 1: Foundation & Security        [██████] 6/6 complete ✓
 PHASE 2: Code Structure & Organization [█████ ] 5/5 complete ✓
-PHASE 3: Database Optimization         [█     ] 1/6 complete
+PHASE 3: Database Optimization         [██    ] 2/6 complete
 PHASE 4: Backend Performance           [█     ] 1/3 complete
 PHASE 5: Frontend Optimization         [██████] 6/8 complete
 PHASE 6: Documentation                 [      ] 0/3 complete
 PHASE 7: Testing & Quality             [██    ] 2/3 complete
 PHASE 8: CI/CD & DevOps               [      ] 0/3 complete
 
-OVERALL PROGRESS: [█████████████████████                       ] 21/37 (57%)
+OVERALL PROGRESS: [█████████████████████                       ] 22/37 (59%)
 
 ================================================================================
                                     NOTES

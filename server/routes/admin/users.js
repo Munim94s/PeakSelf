@@ -37,7 +37,9 @@ router.get('/', async (req, res) => {
       params.push(false);
       wheres.push('verified = $' + params.length);
     }
-    const whereSql = wheres.length ? 'WHERE ' + wheres.join(' AND ') : '';
+    // Add soft delete filter
+    wheres.push('deleted_at IS NULL');
+    const whereSql = 'WHERE ' + wheres.join(' AND ');
     const { rows } = await pool.query(
       `SELECT id::text AS id, email, role, verified, name, avatar_url, created_at
        FROM users
@@ -59,6 +61,7 @@ router.get('/.csv', async (req, res) => {
     const { rows } = await pool.query(
       `SELECT id::text AS id, email, role, verified, name
        FROM users
+       WHERE deleted_at IS NULL
        ORDER BY created_at DESC NULLS LAST
        LIMIT 1000`
     );
@@ -84,7 +87,7 @@ router.post('/:id/make-admin', async (req, res) => {
   try {
     const id = String(req.params.id);
     const { rows } = await pool.query(
-      "UPDATE users SET role = 'admin', updated_at = NOW() WHERE id::text = $1 RETURNING id::text AS id, email, role, verified, name",
+      "UPDATE users SET role = 'admin', updated_at = NOW() WHERE id::text = $1 AND deleted_at IS NULL RETURNING id::text AS id, email, role, verified, name",
       [id]
     );
     if (!rows[0]) return res.status(404).json({ error: 'User not found' });
@@ -106,7 +109,7 @@ router.post('/:id/remove-admin', async (req, res) => {
       return res.status(400).json({ error: 'You cannot remove your own admin role' });
     }
     const { rows } = await pool.query(
-      "UPDATE users SET role = 'user', updated_at = NOW() WHERE id::text = $1 AND role = 'admin' RETURNING id::text AS id, email, role, verified, name",
+      "UPDATE users SET role = 'user', updated_at = NOW() WHERE id::text = $1 AND role = 'admin' AND deleted_at IS NULL RETURNING id::text AS id, email, role, verified, name",
       [id]
     );
     if (!rows[0]) return res.status(404).json({ error: 'User not found or not an admin' });
@@ -120,15 +123,145 @@ router.post('/:id/remove-admin', async (req, res) => {
   }
 });
 
-// Delete user (prevent deleting self)
+// List deleted users
+router.get('/deleted', async (req, res) => {
+  try {
+    const q = String(req.query.q || '').trim().toLowerCase();
+    const params = [];
+    const wheres = ['deleted_at IS NOT NULL'];
+    
+    if (q) {
+      params.push(`%${q}%`);
+      params.push(`%${q}%`);
+      wheres.push('(LOWER(email) LIKE $' + (params.length - 1) + ' OR LOWER(COALESCE(name, ' + "''" + ')) LIKE $' + params.length + ')');
+    }
+    
+    const whereSql = 'WHERE ' + wheres.join(' AND ');
+    const { rows } = await pool.query(
+      `SELECT id::text AS id, email, role, verified, name, avatar_url, deleted_at, created_at,
+              EXTRACT(DAY FROM (NOW() - deleted_at))::INTEGER AS days_deleted
+       FROM users
+       ${whereSql}
+       ORDER BY deleted_at DESC NULLS LAST
+       LIMIT 500`,
+      params
+    );
+    res.json({ users: rows });
+  } catch (e) {
+    console.error('List deleted users error:', e);
+    res.status(500).json({ error: 'Failed to list deleted users' });
+  }
+});
+
+// Bulk restore users
+router.post('/bulk-restore', async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids array is required' });
+    }
+    
+    // Convert to string array and filter valid UUIDs
+    const validIds = ids.map(id => String(id)).filter(id => id.length > 0);
+    if (validIds.length === 0) {
+      return res.status(400).json({ error: 'No valid IDs provided' });
+    }
+    
+    const placeholders = validIds.map((_, i) => `$${i + 1}`).join(',');
+    const { rows } = await pool.query(
+      `UPDATE users 
+       SET deleted_at = NULL, updated_at = NOW() 
+       WHERE id::text IN (${placeholders}) AND deleted_at IS NOT NULL 
+       RETURNING id::text AS id, email`,
+      validIds
+    );
+    
+    // Invalidate caches
+    invalidate.users();
+    invalidate.dashboard();
+    
+    return res.json({ 
+      restored: rows.length,
+      users: rows,
+      message: `Successfully restored ${rows.length} user(s)` 
+    });
+  } catch (e) {
+    console.error('Bulk restore error:', e);
+    res.status(500).json({ error: 'Failed to restore users' });
+  }
+});
+
+// Bulk permanent delete users
+router.delete('/bulk-delete', async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids array is required' });
+    }
+    
+    // Convert to string array and filter valid IDs
+    const validIds = ids.map(id => String(id)).filter(id => id.length > 0);
+    if (validIds.length === 0) {
+      return res.status(400).json({ error: 'No valid IDs provided' });
+    }
+    
+    // Prevent deleting self
+    if (validIds.includes(String(req.currentUser.id))) {
+      return res.status(400).json({ error: 'You cannot delete your own account' });
+    }
+    
+    const placeholders = validIds.map((_, i) => `$${i + 1}`).join(',');
+    const { rowCount } = await pool.query(
+      `DELETE FROM users 
+       WHERE id::text IN (${placeholders}) AND deleted_at IS NOT NULL`,
+      validIds
+    );
+    
+    // Invalidate caches
+    invalidate.users();
+    invalidate.dashboard();
+    
+    return res.json({ 
+      deleted: rowCount,
+      message: `Permanently deleted ${rowCount} user(s)` 
+    });
+  } catch (e) {
+    console.error('Bulk delete error:', e);
+    res.status(500).json({ error: 'Failed to delete users' });
+  }
+});
+
+// Restore soft-deleted user
+router.post('/:id/restore', async (req, res) => {
+  try {
+    const id = String(req.params.id);
+    const { rows } = await pool.query(
+      "UPDATE users SET deleted_at = NULL, updated_at = NOW() WHERE id::text = $1 AND deleted_at IS NOT NULL RETURNING id::text AS id, email, role, verified, name",
+      [id]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'User not found or not deleted' });
+    // Invalidate caches that include user stats
+    invalidate.users();
+    invalidate.dashboard();
+    return res.json({ user: rows[0], message: 'User restored successfully' });
+  } catch (e) {
+    console.error('Restore user error:', e);
+    res.status(500).json({ error: 'Failed to restore user' });
+  }
+});
+
+// Soft delete user (prevent deleting self)
 router.delete('/:id', async (req, res) => {
   try {
     const id = String(req.params.id);
     if (id === String(req.currentUser.id)) {
       return res.status(400).json({ error: 'You cannot delete your own account' });
     }
-    const { rowCount } = await pool.query("DELETE FROM users WHERE id::text = $1", [id]);
-    if (rowCount === 0) return res.status(404).json({ error: 'User not found' });
+    const { rowCount } = await pool.query(
+      "UPDATE users SET deleted_at = NOW() WHERE id::text = $1 AND deleted_at IS NULL",
+      [id]
+    );
+    if (rowCount === 0) return res.status(404).json({ error: 'User not found or already deleted' });
     // Invalidate caches that include user stats
     invalidate.users();
     invalidate.dashboard();
@@ -145,8 +278,8 @@ router.post('/invite', async (req, res) => {
     const email = String(req.body?.email || '').toLowerCase().trim();
     const name = typeof req.body?.name === 'string' ? req.body.name.trim() : null;
     if (!email) return res.status(400).json({ error: 'Email is required' });
-    // Check existing
-    const existing = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
+    // Check existing (only non-deleted users)
+    const existing = await pool.query("SELECT * FROM users WHERE email = $1 AND deleted_at IS NULL", [email]);
     let user = existing.rows[0];
     if (!user) {
       const created = await pool.query(

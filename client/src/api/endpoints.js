@@ -50,11 +50,15 @@ export const admin = {
   
   // Users
   users: `${API}/admin/users`,
+  deletedUsers: `${API}/admin/users/deleted`,
   usersCSV: `${API}/admin/users.csv`,
   userById: (id) => `${API}/admin/users/${encodeURIComponent(id)}`,
   inviteUser: `${API}/admin/users/invite`,
   makeAdmin: (id) => `${API}/admin/users/${encodeURIComponent(id)}/make-admin`,
   removeAdmin: (id) => `${API}/admin/users/${encodeURIComponent(id)}/remove-admin`,
+  restoreUser: (id) => `${API}/admin/users/${encodeURIComponent(id)}/restore`,
+  bulkRestore: `${API}/admin/users/bulk-restore`,
+  bulkDelete: `${API}/admin/users/bulk-delete`,
   
   // Sessions
   sessions: `${API}/admin/sessions`,

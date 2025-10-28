@@ -71,7 +71,7 @@ function currentUserId(req) {
 
 async function verifyUserId(userId) {
   if (!userId || !uuidValidate(userId)) return null;
-  const { rows } = await pool.query('SELECT id FROM users WHERE id = $1', [userId]);
+  const { rows } = await pool.query('SELECT id FROM users WHERE id = $1 AND deleted_at IS NULL', [userId]);
   return rows.length > 0 ? userId : null;
 }
 

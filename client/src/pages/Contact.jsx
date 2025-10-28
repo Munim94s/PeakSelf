@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { Mail, Phone, MapPin, Send, MessageCircle } from 'lucide-react';
+import { useModal } from '../contexts/ModalContext';
 import './Contact.css';
 
 const Contact = () => {
+  const modal = useModal();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -17,11 +19,11 @@ const Contact = () => {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     // Handle form submission here
     console.log('Form submitted:', formData);
-    alert('Thank you for your message! We\'ll get back to you soon.');
+    await modal.alert('Thank you for your message! We\'ll get back to you soon.', 'Message Sent');
     setFormData({ name: '', email: '', subject: '', message: '' });
   };
 

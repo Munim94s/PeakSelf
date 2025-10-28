@@ -113,7 +113,7 @@ passport.serializeUser((user, done) => {
 
 passport.deserializeUser(async (obj, done) => {
   try {
-    const { rows } = await pool.query("SELECT id, email, provider, verified, name, avatar_url, role FROM users WHERE id = $1", [obj.id]);
+    const { rows } = await pool.query("SELECT id, email, provider, verified, name, avatar_url, role FROM users WHERE id = $1 AND deleted_at IS NULL", [obj.id]);
     if (!rows[0]) return done(null, false);
     done(null, rows[0]);
   } catch (err) {
@@ -140,8 +140,8 @@ if (isGoogleEnabled()) {
       const avatarUrl = profile.photos?.[0]?.value || null;
       if (!email) return done(null, false);
 
-      // Try find by google_id first
-      let { rows } = await pool.query("SELECT * FROM users WHERE google_id = $1", [googleId]);
+      // Try find by google_id first (check active users)
+      let { rows } = await pool.query("SELECT * FROM users WHERE google_id = $1 AND deleted_at IS NULL", [googleId]);
       if (rows[0]) {
         // Update avatar/name opportunistically
         const updated = await pool.query(
@@ -150,9 +150,23 @@ if (isGoogleEnabled()) {
         );
         return done(null, updated.rows[0]);
       }
+      
+      // Check if user with google_id was soft-deleted
+      const deletedByGoogleId = await pool.query("SELECT * FROM users WHERE google_id = $1 AND deleted_at IS NOT NULL", [googleId]);
+      if (deletedByGoogleId.rows[0]) {
+        // Restore the soft-deleted user
+        const restored = await pool.query(
+          "UPDATE users SET deleted_at = NULL, name = COALESCE(name, $1), avatar_url = $2, updated_at = NOW() WHERE id = $3 RETURNING *",
+          [displayName, avatarUrl, deletedByGoogleId.rows[0].id]
+        );
+        invalidate.users();
+        invalidate.dashboard();
+        logger.info(`User ${email} automatically restored on Google OAuth login`);
+        return done(null, restored.rows[0]);
+      }
 
-      // Then by email
-      const result = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
+      // Then by email (check active users)
+      const result = await pool.query("SELECT * FROM users WHERE email = $1 AND deleted_at IS NULL", [email]);
       const existing = result.rows[0];
       if (existing) {
         // If existing is local, link google_id, keep provider as local to allow local login
@@ -172,6 +186,20 @@ if (isGoogleEnabled()) {
           return done(null, updated.rows[0]);
         }
         return done(null, existing);
+      }
+      
+      // Check if user with email was soft-deleted
+      const deletedByEmail = await pool.query("SELECT * FROM users WHERE email = $1 AND deleted_at IS NOT NULL", [email]);
+      if (deletedByEmail.rows[0]) {
+        // Restore the soft-deleted user and link Google account
+        const restored = await pool.query(
+          "UPDATE users SET deleted_at = NULL, google_id = $1, avatar_url = COALESCE($2, avatar_url), name = COALESCE(name, $3), updated_at = NOW() WHERE id = $4 RETURNING *",
+          [googleId, avatarUrl, displayName, deletedByEmail.rows[0].id]
+        );
+        invalidate.users();
+        invalidate.dashboard();
+        logger.info(`User ${email} automatically restored on Google OAuth login`);
+        return done(null, restored.rows[0]);
       }
 
       // Create new google user - Google users are automatically verified
@@ -209,7 +237,7 @@ function signJwt(user) {
 }
 
 async function getUserById(id) {
-  const { rows } = await pool.query("SELECT id, email, provider, verified, name, avatar_url, role FROM users WHERE id = $1", [id]);
+  const { rows } = await pool.query("SELECT id, email, provider, verified, name, avatar_url, role FROM users WHERE id = $1 AND deleted_at IS NULL", [id]);
   return rows[0] || null;
 }
 
@@ -236,8 +264,8 @@ router.post("/register", authPasswordLimiter, async (req, res) => {
     const lower = String(email).toLowerCase();
     const safeName = typeof name === 'string' && name.trim() ? name.trim() : null;
     
-    // Check if user already exists in users table
-    const { rows } = await pool.query("SELECT * FROM users WHERE email = $1", [lower]);
+    // Check if user already exists in users table (only non-deleted)
+    const { rows } = await pool.query("SELECT * FROM users WHERE email = $1 AND deleted_at IS NULL", [lower]);
     const existing = rows[0];
     
     if (existing) {
@@ -298,17 +326,65 @@ router.post("/login", authPasswordLimiter, async (req, res) => {
       return res.status(400).json({ error: "Please verify your email first. Check your inbox for the verification link." });
     }
     
-    const { rows } = await pool.query("SELECT * FROM users WHERE email = $1", [lower]);
-    const user = rows[0];
+    // Check for active user first
+    let { rows } = await pool.query("SELECT * FROM users WHERE email = $1 AND deleted_at IS NULL", [lower]);
+    let user = rows[0];
+    
+    // If no active user found, check if user is soft-deleted
+    if (!user) {
+      const deletedCheck = await pool.query("SELECT * FROM users WHERE email = $1 AND deleted_at IS NOT NULL", [lower]);
+      const deletedUser = deletedCheck.rows[0];
+      
+      if (deletedUser) {
+        // User was soft-deleted, check password first
+        const ok = await bcrypt.compare(password, deletedUser.password_hash);
+        if (!ok) {
+          return res.status(400).json({ error: "Invalid credentials" });
+        }
+        
+        // Password is correct, restore the user automatically
+        const restored = await pool.query(
+          "UPDATE users SET deleted_at = NULL, updated_at = NOW() WHERE id = $1 RETURNING *",
+          [deletedUser.id]
+        );
+        user = restored.rows[0];
+        
+        // Invalidate caches
+        invalidate.users();
+        invalidate.dashboard();
+        
+        logger.info(`User ${user.email} automatically restored on login`);
+      } else {
+        // No user found at all
+        return res.status(400).json({ error: "Invalid credentials" });
+      }
+    } else {
+      // Active user found, check password
+      const ok = await bcrypt.compare(password, user.password_hash);
+      if (!ok) return res.status(400).json({ error: "Invalid credentials" });
+    }
+    
+    // Check if local login is allowed for this user
     const blockReason = ensureLocalAllowed(user);
     if (blockReason) return res.status(400).json({ error: blockReason });
-    const ok = await bcrypt.compare(password, user.password_hash);
-    if (!ok) return res.status(400).json({ error: "Invalid credentials" });
+    
+    // Login successful
     const token = signJwt(user);
     setJwtCookie(res, token);
     req.login({ id: user.id }, (err) => {
       if (err) return res.status(500).json({ error: "Login failed" });
-      return req.session.save(() => res.json({ message: "Logged in", user: { id: user.id, email: user.email, provider: user.provider, verified: user.verified, name: user.name, avatar_url: user.avatar_url, role: user.role } }));
+      return req.session.save(() => res.json({ 
+        message: "Logged in", 
+        user: { 
+          id: user.id, 
+          email: user.email, 
+          provider: user.provider, 
+          verified: user.verified, 
+          name: user.name, 
+          avatar_url: user.avatar_url, 
+          role: user.role 
+        } 
+      }));
     });
   } catch (e) {
     const msg = process.env.NODE_ENV === 'production' ? 'Login failed' : `Login failed: ${e.message}`;
@@ -372,8 +448,8 @@ router.get("/verify-email", authGeneralLimiter, async (req, res) => {
     if (pendingResult.rows[0]) {
       const pending = pendingResult.rows[0];
       
-      // Check if user with this email already exists
-      const existingUser = await pool.query("SELECT * FROM users WHERE LOWER(email) = $1", [pending.email.toLowerCase()]);
+      // Check if user with this email already exists (only non-deleted)
+      const existingUser = await pool.query("SELECT * FROM users WHERE LOWER(email) = $1 AND deleted_at IS NULL", [pending.email.toLowerCase()]);
       const existing = existingUser.rows[0];
       
       let user;
@@ -433,7 +509,7 @@ router.get("/verify-email", authGeneralLimiter, async (req, res) => {
     
     // Fetch the user to auto-login
     const userResult = await pool.query(
-      "SELECT id, email, provider, verified, name, avatar_url, role FROM users WHERE id::text = $1",
+      "SELECT id, email, provider, verified, name, avatar_url, role FROM users WHERE id::text = $1 AND deleted_at IS NULL",
       [rec.user_id]
     );
     const user = userResult.rows[0];

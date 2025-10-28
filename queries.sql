@@ -40,7 +40,7 @@ EXCEPTION
   WHEN duplicate_object THEN NULL;
 END $$;
 
--- Users table
+-- Users table (includes soft delete support via deleted_at column)
 CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email TEXT NOT NULL,
@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS users (
   sessions_count BIGINT NOT NULL DEFAULT 0,
   name TEXT NULL,
   avatar_url TEXT NULL,
+  deleted_at TIMESTAMPTZ NULL,  -- Soft delete: NULL = active, timestamp = deleted
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CONSTRAINT users_role_check CHECK (role IN ('user','admin'))
@@ -74,6 +75,11 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 -- Enforce case-insensitive uniqueness for emails and speed up equality lookups
 CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_ci ON users ((LOWER(email)));
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+
+-- Soft delete indexes (optimize queries that filter WHERE deleted_at IS NULL)
+CREATE INDEX IF NOT EXISTS idx_users_active ON users(id) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_users_email_active ON users(email) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_users_deleted_at ON users(deleted_at) WHERE deleted_at IS NOT NULL;
 
 -- Email verification tokens
 CREATE TABLE IF NOT EXISTS email_verification_tokens (
@@ -143,6 +149,7 @@ CREATE TABLE IF NOT EXISTS visitors (
   first_referrer TEXT NULL,
   current_referrer TEXT NULL,
   first_landing_path TEXT NULL,
+  deleted_at TIMESTAMPTZ NULL,  -- Soft delete support
   first_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   sessions_count BIGINT NOT NULL DEFAULT 0
@@ -150,6 +157,7 @@ CREATE TABLE IF NOT EXISTS visitors (
 
 CREATE INDEX IF NOT EXISTS idx_visitors_user ON visitors(user_id);
 CREATE INDEX IF NOT EXISTS idx_visitors_last_seen ON visitors(last_seen_at DESC);
+CREATE INDEX IF NOT EXISTS idx_visitors_active ON visitors(id) WHERE deleted_at IS NULL;
 
 -- Each browsing session lasts 30 minutes of inactivity. Each session has its own source.
 CREATE TABLE IF NOT EXISTS user_sessions (
@@ -276,13 +284,17 @@ SELECT *
 FROM user_sessions
 WHERE ended_at IS NULL AND last_seen_at >= NOW() - INTERVAL '30 minutes';
 
--- Newsletter subscriptions
+-- Newsletter subscriptions (includes soft delete support)
 CREATE TABLE IF NOT EXISTS newsletter_subscriptions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email TEXT NOT NULL UNIQUE,
   verified BOOLEAN NOT NULL DEFAULT FALSE,
+  deleted_at TIMESTAMPTZ NULL,  -- Soft delete support
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Soft delete index for newsletter subscriptions
+CREATE INDEX IF NOT EXISTS idx_newsletter_active ON newsletter_subscriptions(email) WHERE deleted_at IS NULL;
 
 -- Authentication and registration rules (documented expectations)
 -- 

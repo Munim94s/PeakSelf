@@ -3,10 +3,12 @@ import { Plus } from 'lucide-react';
 import ContentEditor from './ContentEditor';
 import SkeletonGrid from './SkeletonGrid';
 import { apiClient, endpoints, response } from '../api';
+import { useModal } from '../contexts/ModalContext';
 import './AdminContent.css';
 import './AdminSessions.css';
 
 export default function AdminContent() {
+  const modal = useModal();
   const [showEditor, setShowEditor] = useState(false);
   const [posts, setPosts] = useState([]);
   const [editingPost, setEditingPost] = useState(null);
@@ -44,7 +46,7 @@ export default function AdminContent() {
       }
       setShowEditor(false);
     } catch (err) {
-      alert(response.getErrorMessage(err));
+      await modal.alert(response.getErrorMessage(err), 'Error');
     }
   };
 
@@ -59,13 +61,14 @@ export default function AdminContent() {
   };
 
   const handleDeletePost = async (postId) => {
-    if (!confirm('Are you sure you want to delete this post?')) return;
+    const confirmed = await modal.confirm('Are you sure you want to delete this post?', 'Confirm Delete', { variant: 'danger' });
+    if (!confirmed) return;
     
     try {
       await apiClient.delete(endpoints.blog.delete(postId));
       setPosts(posts.filter(p => p.id !== postId));
     } catch (err) {
-      alert(response.getErrorMessage(err));
+      await modal.alert(response.getErrorMessage(err), 'Error');
     }
   };
 

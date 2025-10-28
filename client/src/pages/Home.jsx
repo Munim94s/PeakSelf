@@ -5,10 +5,11 @@ import PostList from '../components/PostList';
 import PostCard from '../components/PostCard';
 import { blogPosts } from '../data/blogPosts';
 import { apiClient, endpoints, response } from '../api';
+import { useModal } from '../contexts/ModalContext';
 import './Home.css';
 
 const Home = () => {
-
+  const modal = useModal();
   const featuredPost = blogPosts.find(post => post.featured);
   const recentPosts = blogPosts.filter(post => !post.featured).slice(0, 5);
 
@@ -158,10 +159,10 @@ const Home = () => {
             if (!email) return;
             try {
               const { data } = await apiClient.post(endpoints.newsletter.subscribe, { email });
-              alert(data.message || 'Check your email to confirm your subscription.');
+              await modal.alert(data.message || 'Check your email to confirm your subscription.', 'Success');
               e.target.reset();
             } catch (err) {
-              alert(response.getErrorMessage(err));
+              await modal.alert(response.getErrorMessage(err), 'Error');
             }
           }}>
             <input

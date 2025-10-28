@@ -1,9 +1,11 @@
 import React, { useState, useRef } from 'react';
 import { Bold, Italic, Underline, Link as LinkIcon, Image } from 'lucide-react';
 import { apiClient, endpoints } from '../api';
+import { useModal } from '../contexts/ModalContext';
 import './ContentEditor.css';
 
 export default function ContentEditor({ onSave, onCancel, initialPost }) {
+  const modal = useModal();
   const [title, setTitle] = useState(initialPost?.title || '');
   const [content, setContent] = useState([]);
   const [showLinkModal, setShowLinkModal] = useState(false);
@@ -76,15 +78,15 @@ export default function ContentEditor({ onSave, onCancel, initialPost }) {
     }
     
     if (!file.type.startsWith('image/')) {
-      alert('Please select an image file');
+      await modal.alert('Please select an image file', 'Invalid File');
       return;
     }
     
     // Show loading indicator (use base64 preview temporarily)
     const reader = new FileReader();
-    reader.onerror = (error) => {
+    reader.onerror = async (error) => {
       console.error('FileReader error:', error);
-      alert('Failed to read image file');
+      await modal.alert('Failed to read image file', 'Error');
     };
     
     reader.onload = async (event) => {
@@ -123,7 +125,7 @@ export default function ContentEditor({ onSave, onCancel, initialPost }) {
           if (tempWrapper) {
             tempWrapper.remove();
           }
-          alert(`Failed to upload image: ${error.message}`);
+          await modal.alert(`Failed to upload image: ${error.message}`, 'Upload Error');
         }
         
       // Add event listeners to handle deletion

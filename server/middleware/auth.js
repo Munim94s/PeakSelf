@@ -101,7 +101,7 @@ export async function requireAdmin(req, res, next) {
   if (decoded?.sub) {
     try {
       const { rows } = await pool.query(
-        'SELECT email, role FROM users WHERE id = $1', 
+        'SELECT email, role FROM users WHERE id = $1 AND deleted_at IS NULL', 
         [decoded.sub]
       );
       if (rows[0]) {
