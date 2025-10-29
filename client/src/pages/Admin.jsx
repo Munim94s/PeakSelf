@@ -1,12 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { BarChart3, Users as UsersIcon, FileText, Settings as SettingsIcon, Activity, Menu, X } from 'lucide-react';
+import { BarChart3, Users as UsersIcon, FileText, Settings as SettingsIcon, Activity, Menu, X, Database } from 'lucide-react';
 import { apiClient, endpoints, auth as apiAuth } from '../api';
 import AdminSettings from '../components/AdminSettings';
 import AdminOverview from '../components/AdminOverview';
 import AdminUsers from '../components/AdminUsers';
 import AdminContent from '../components/AdminContent';
 import AdminSessions from '../components/AdminSessions';
+import AdminPerformance from '../components/AdminPerformance';
 
 export default function Admin() {
   const [user, setUser] = useState(null);
@@ -39,6 +40,7 @@ export default function Admin() {
       { key: 'sessions', label: 'Sessions', icon: Activity, path: '/admin/sessions' },
       { key: 'users', label: 'Users', icon: UsersIcon, path: '/admin/users' },
       { key: 'content', label: 'Content', icon: FileText, path: '/admin/content' },
+      { key: 'performance', label: 'Performance', icon: Database, path: '/admin/performance' },
       { key: 'settings', label: 'Settings', icon: SettingsIcon, path: '/admin/settings' }
     ];
     return base;
@@ -143,6 +145,7 @@ export default function Admin() {
           <Route path="sessions" element={<AdminSessions />} />
           <Route path="users" element={<AdminUsers />} />
           <Route path="content" element={<AdminContent />} />
+          <Route path="performance" element={<AdminPerformance />} />
           <Route path="settings" element={<AdminSettings />} />
         </Routes>
       </section>
