@@ -127,10 +127,14 @@ app.get('/api/csrf-token', (req, res) => {
   res.json({ csrfToken: token });
 });
 
-// Apply CSRF protection to state-changing requests (except multipart uploads)
+// Apply CSRF protection to state-changing requests (except multipart uploads and error logging)
 app.use((req, res, next) => {
   // Skip CSRF for multipart/form-data uploads - they handle CSRF separately
   if (req.path.includes('/upload-image')) {
+    return next();
+  }
+  // Skip CSRF for error logging - errors can happen before CSRF token is obtained
+  if (req.path === '/api/errors/log') {
     return next();
   }
   return csrfProtection(req, res, next);
@@ -143,9 +147,13 @@ async function setupRoutes() {
   const { default: adminRouter } = await import("./routes/admin/index.js");
   const { default: trackRouter } = await import("./routes/track.js");
   const { default: healthRouter } = await import("./routes/health.js");
+  const { default: errorsRouter } = await import("./routes/errors.js");
   
   // Health check endpoints (no rate limiting for monitoring)
   app.use("/api/health", healthRouter);
+  
+  // Error logging endpoint (no rate limiting, no CSRF - errors need to be logged ASAP)
+  app.use("/api/errors", errorsRouter);
   
   // Apply specific rate limiters to routes
   // Note: auth routes have their own specific limiters (password, OAuth, general) applied per-endpoint
