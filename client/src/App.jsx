@@ -43,7 +43,6 @@ function App() {
               <Route path="/not-accessible" element={<NotAccessible />} />
             </Routes>
           </Suspense>
-        </main>
         {!hideFooter && <Footer />}
       </div>
     </ModalProvider>
