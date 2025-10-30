@@ -6,7 +6,6 @@ import Tracker from './components/Tracker';
 import BrandedLoadingScreen from './components/BrandedLoadingScreen';
 import { ModalProvider } from './contexts/ModalContext';
 import './App.css';
-
 // Lazy load all pages
 const Home = lazy(() => import('./pages/Home'));
 const Blog = lazy(() => import('./pages/Blog'));
@@ -29,7 +28,6 @@ function App() {
       <div className="app">
         <Header />
         <Tracker />
-        <main>
           <Suspense fallback={<BrandedLoadingScreen />}>
             <Routes>
               <Route path="/" element={<Home />} />
