@@ -2,6 +2,7 @@ import express from 'express';
 import pool from '../../utils/db.js';
 import logger from '../../utils/logger.js';
 import cache from '../../utils/cache.js';
+import { paginated, success, error, serviceUnavailable } from '../../utils/response.js';
 
 const router = express.Router();
 
@@ -36,10 +37,7 @@ router.get('/queries', async (req, res) => {
     `);
 
     if (!extensionCheck.rows[0].enabled) {
-      return res.status(503).json({
-        error: 'pg_stat_statements extension is not enabled',
-        message: 'Run the enable_pg_stat_statements migration to enable query tracking'
-      });
+      return serviceUnavailable(res, 'pg_stat_statements extension is not enabled. Run the enable_pg_stat_statements migration to enable query tracking');
     }
 
     // Valid order_by options to prevent SQL injection
@@ -125,15 +123,25 @@ router.get('/queries', async (req, res) => {
       }
     };
 
-    cache.set(cacheKey, data, 300); // Cache for 5 minutes
-    res.json(data);
+    const responseData = {
+      queries: result.rows,
+      filters: {
+        order_by: orderByColumn,
+        min_calls: parseInt(min_calls),
+        filter: filter
+      }
+    };
 
-  } catch (error) {
-    logger.error('Error fetching query statistics:', error);
-    res.status(500).json({ 
-      error: 'Failed to fetch query statistics',
-      details: error.message 
+    cache.set(cacheKey, responseData, 300); // Cache for 5 minutes
+    return paginated(res, result.rows, {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      total: totalQueries
     });
+
+  } catch (err) {
+    logger.error('Error fetching query statistics:', err);
+    return error(res, 'Failed to fetch query statistics', 500, { details: err.message });
   }
 });
 
@@ -158,10 +166,7 @@ router.get('/summary', async (req, res) => {
     `);
 
     if (!extensionCheck.rows[0].enabled) {
-      return res.status(503).json({
-        error: 'pg_stat_statements extension is not enabled',
-        message: 'Run the enable_pg_stat_statements migration to enable query tracking'
-      });
+      return serviceUnavailable(res, 'pg_stat_statements extension is not enabled. Run the enable_pg_stat_statements migration to enable query tracking');
     }
 
     // Get overall performance metrics
@@ -237,7 +242,7 @@ router.get('/summary', async (req, res) => {
     };
 
     cache.set(cacheKey, data, 120); // Cache for 2 minutes
-    res.json(data);
+    return success(res, data);
 
   } catch (error) {
     logger.error('Error fetching performance summary:', error);

@@ -4,6 +4,7 @@ import logger from "../utils/logger.js";
 import pool from "../utils/db.js";
 import { verifyJwt } from "../middleware/auth.js";
 import { invalidate } from "../utils/cache.js";
+import { success } from "../utils/response.js";
 import { 
   TRACKING_COOKIES, 
   COOKIE_VISITOR_MAX_AGE, 
@@ -251,7 +252,7 @@ router.post('/', async (req, res) => {
       logger.warn('Warning: failed to insert traffic_events (continuing):', e2.message);
     }
 
-    res.json({ ok: true, visitor_id: visitor.id, session_id: sessionId });
+    return success(res, { visitor_id: visitor.id, session_id: sessionId });
   } catch (e) {
     logger.error('Track error (falling back to simple traffic log):', e);
     // Fallback: record minimal traffic so admin stats are not empty
@@ -264,7 +265,7 @@ router.post('/', async (req, res) => {
       logger.warn('Warning: failed fallback traffic_events insert:', e3.message);
     }
     // Do not reveal details to client
-    res.status(200).json({ ok: true });
+    return success(res);
   }
 });
 

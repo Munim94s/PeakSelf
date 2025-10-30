@@ -467,7 +467,11 @@ describe('API Routes Integration Tests', () => {
           })
           .expect(200);
 
-        expect(response.body.ok).toBe(true);
+        expect(response.body.success).toBe(true);
+        if (response.body.data) {
+          expect(response.body.data).toHaveProperty('visitor_id');
+          expect(response.body.data).toHaveProperty('session_id');
+        }
       });
 
       it('should track without referrer', async () => {
@@ -479,7 +483,7 @@ describe('API Routes Integration Tests', () => {
           .send({ path: '/' })
           .expect(200);
 
-        expect(response.body.ok).toBe(true);
+        expect(response.body.success).toBe(true);
       });
 
       it('should handle tracking errors gracefully', async () => {
@@ -490,7 +494,7 @@ describe('API Routes Integration Tests', () => {
           .send({ path: '/' })
           .expect(200);
 
-        expect(response.body.ok).toBe(true);
+        expect(response.body.success).toBe(true);
       });
     });
   });

@@ -66,10 +66,11 @@ describe('Admin Performance Routes', () => {
       const res = await request(app).get('/api/admin/performance/summary');
 
       expect(res.status).toBe(200);
-      expect(res.body).toHaveProperty('query_stats');
-      expect(res.body).toHaveProperty('query_breakdown');
-      expect(res.body).toHaveProperty('database_size');
-      expect(res.body).toHaveProperty('connections');
+      expect(res.body.success).toBe(true);
+      expect(res.body.data).toHaveProperty('query_stats');
+      expect(res.body.data).toHaveProperty('query_breakdown');
+      expect(res.body.data).toHaveProperty('database_size');
+      expect(res.body.data).toHaveProperty('connections');
     });
 
     it('should return 503 if extension not enabled', async () => {
@@ -78,6 +79,7 @@ describe('Admin Performance Routes', () => {
       const res = await request(app).get('/api/admin/performance/summary');
 
       expect(res.status).toBe(503);
+      expect(res.body.success).toBe(false);
       expect(res.body.error).toContain('not enabled');
     });
   });
@@ -94,9 +96,10 @@ describe('Admin Performance Routes', () => {
         .query({ filter: 'application' });
 
       expect(res.status).toBe(200);
-      expect(res.body).toHaveProperty('queries');
+      expect(res.body.success).toBe(true);
+      expect(res.body.data).toBeDefined();
       expect(res.body).toHaveProperty('pagination');
-      expect(res.body.filters.filter).toBe('application');
+      expect(res.body.pagination.page).toBe(1);
     });
   });
 

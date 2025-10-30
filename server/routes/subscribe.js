@@ -2,6 +2,7 @@ import express from "express";
 import { v4 as uuidv4 } from "uuid";
 import nodemailer from "nodemailer";
 import pool from "../utils/db.js";
+import { success, badRequest, error } from "../utils/response.js";
 
 const router = express.Router();
 
@@ -18,10 +19,10 @@ const transporter = nodemailer.createTransport({
 router.post("/", async (req, res) => {
   try {
     const { email } = req.body || {};
-    if (!email) return res.status(400).json({ error: "Email is required" });
+    if (!email) return badRequest(res, "Email is required");
     const lower = String(email).toLowerCase();
     const exists = await pool.query("SELECT * FROM newsletter_subscriptions WHERE email = $1", [lower]);
-    if (exists.rows[0]) return res.status(200).json({ message: "Already subscribed" });
+    if (exists.rows[0]) return success(res, null, "Already subscribed");
 
     await pool.query("INSERT INTO newsletter_subscriptions (email, verified) VALUES ($1, FALSE)", [lower]);
 
@@ -39,20 +40,20 @@ router.post("/", async (req, res) => {
         html: `<p>Click to confirm subscription:</p><p><a href="${url}">${url}</a></p>`
       });
     }
-    res.json({ message: "Check your email to confirm subscription" });
+    return success(res, null, "Check your email to confirm subscription");
   } catch (e) {
-    res.status(500).json({ error: "Subscription failed" });
+    return error(res, "Subscription failed", 500);
   }
 });
 
 router.get("/verify", async (req, res) => {
   try {
     const email = String(req.query.email || "").toLowerCase();
-    if (!email) return res.status(400).json({ error: "Missing email" });
+    if (!email) return badRequest(res, "Missing email");
     await pool.query("UPDATE newsletter_subscriptions SET verified = TRUE WHERE email = $1", [email]);
-    res.json({ message: "Subscription confirmed" });
+    return success(res, null, "Subscription confirmed");
   } catch (e) {
-    res.status(500).json({ error: "Verification failed" });
+    return error(res, "Verification failed", 500);
   }
 });
 
