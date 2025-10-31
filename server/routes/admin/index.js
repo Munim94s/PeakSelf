@@ -5,6 +5,7 @@ import usersRouter from "./users.js";
 import trafficRouter from "./traffic.js";
 import sessionsRouter from "./sessions.js";
 import blogRouter from "./blog.js";
+import tagsRouter from "./tags.js";
 import performanceRouter from "./performance.js";
 
 const router = express.Router();
@@ -18,6 +19,7 @@ router.use('/users', usersRouter);
 router.use('/traffic', trafficRouter);
 router.use('/sessions', sessionsRouter);
 router.use('/blog', blogRouter);
+router.use('/tags', tagsRouter);
 router.use('/performance', performanceRouter);
 
 export default router;

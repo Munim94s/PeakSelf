@@ -34,9 +34,20 @@ function generateSlug(title) {
 // GET /api/admin/blog - Get all blog posts
 router.get('/', async (req, res) => {
   try {
-    const result = await pool.query(
-      'SELECT * FROM blog_posts ORDER BY created_at DESC'
-    );
+    const result = await pool.query(`
+      SELECT bp.*,
+        COALESCE(
+          json_agg(
+            json_build_object('id', t.id, 'name', t.name, 'slug', t.slug, 'color', t.color)
+          ) FILTER (WHERE t.id IS NOT NULL),
+          '[]'
+        ) as tags
+      FROM blog_posts bp
+      LEFT JOIN blog_post_tags bpt ON bp.id = bpt.blog_post_id
+      LEFT JOIN tags t ON bpt.tag_id = t.id
+      GROUP BY bp.id
+      ORDER BY bp.created_at DESC
+    `);
     res.json({ posts: result.rows });
   } catch (error) {
     logger.error('Error fetching blog posts:', error);
@@ -48,10 +59,20 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await pool.query(
-      'SELECT * FROM blog_posts WHERE id = $1',
-      [id]
-    );
+    const result = await pool.query(`
+      SELECT bp.*,
+        COALESCE(
+          json_agg(
+            json_build_object('id', t.id, 'name', t.name, 'slug', t.slug, 'color', t.color)
+          ) FILTER (WHERE t.id IS NOT NULL),
+          '[]'
+        ) as tags
+      FROM blog_posts bp
+      LEFT JOIN blog_post_tags bpt ON bp.id = bpt.blog_post_id
+      LEFT JOIN tags t ON bpt.tag_id = t.id
+      WHERE bp.id = $1
+      GROUP BY bp.id
+    `, [id]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Blog post not found' });
@@ -66,8 +87,9 @@ router.get('/:id', async (req, res) => {
 
 // POST /api/admin/blog - Create new blog post
 router.post('/', async (req, res) => {
+  const client = await pool.connect();
   try {
-    const { title, content, excerpt, status = 'draft' } = req.body;
+    const { title, content, excerpt, status = 'draft', tagIds = [] } = req.body;
 
     if (!title || !content) {
       return res.status(400).json({ error: 'Title and content are required' });
@@ -76,29 +98,66 @@ router.post('/', async (req, res) => {
     const slug = generateSlug(title);
     const authorId = req.currentUser.id;
 
-    const result = await pool.query(
+    await client.query('BEGIN');
+
+    const result = await client.query(
       `INSERT INTO blog_posts (title, content, excerpt, slug, status, author_id)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
       [title, content, excerpt, slug, status, authorId]
     );
 
-    res.status(201).json({ post: result.rows[0] });
+    const postId = result.rows[0].id;
+
+    // Insert tag associations
+    if (tagIds.length > 0) {
+      const tagValues = tagIds.map((tagId, idx) => 
+        `($1, $${idx + 2})`
+      ).join(', ');
+      
+      await client.query(
+        `INSERT INTO blog_post_tags (blog_post_id, tag_id) VALUES ${tagValues}`,
+        [postId, ...tagIds]
+      );
+    }
+
+    // Fetch the complete post with tags
+    const postWithTags = await client.query(`
+      SELECT bp.*,
+        COALESCE(
+          json_agg(
+            json_build_object('id', t.id, 'name', t.name, 'slug', t.slug, 'color', t.color)
+          ) FILTER (WHERE t.id IS NOT NULL),
+          '[]'
+        ) as tags
+      FROM blog_posts bp
+      LEFT JOIN blog_post_tags bpt ON bp.id = bpt.blog_post_id
+      LEFT JOIN tags t ON bpt.tag_id = t.id
+      WHERE bp.id = $1
+      GROUP BY bp.id
+    `, [postId]);
+
+    await client.query('COMMIT');
+    res.status(201).json({ post: postWithTags.rows[0] });
   } catch (error) {
+    await client.query('ROLLBACK');
     logger.error('Error creating blog post:', error);
     if (error.code === '23505') { // Unique violation
       res.status(409).json({ error: 'A post with this title already exists' });
     } else {
       res.status(500).json({ error: 'Failed to create blog post' });
     }
+  } finally {
+    client.release();
   }
 });
 
 // PUT /api/admin/blog/:id - Update blog post
 router.put('/:id', async (req, res) => {
+  const client = await pool.connect();
   try {
     const { id } = req.params;
-    const { title, content, excerpt, status } = req.body;
+    const { title, content, excerpt, status, tagIds = [] } = req.body;
 
     if (!title || !content) {
       return res.status(400).json({ error: 'Title and content are required' });
@@ -106,7 +165,9 @@ router.put('/:id', async (req, res) => {
 
     const slug = generateSlug(title);
 
-    const result = await pool.query(
+    await client.query('BEGIN');
+
+    const result = await client.query(
       `UPDATE blog_posts 
        SET title = $1, content = $2, excerpt = $3, slug = $4, status = $5, updated_at = NOW()
        WHERE id = $6
@@ -115,17 +176,56 @@ router.put('/:id', async (req, res) => {
     );
 
     if (result.rows.length === 0) {
+      await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Blog post not found' });
     }
 
-    res.json({ post: result.rows[0] });
+    // Delete existing tag associations
+    await client.query(
+      'DELETE FROM blog_post_tags WHERE blog_post_id = $1',
+      [id]
+    );
+
+    // Insert new tag associations
+    if (tagIds.length > 0) {
+      const tagValues = tagIds.map((tagId, idx) => 
+        `($1, $${idx + 2})`
+      ).join(', ');
+      
+      await client.query(
+        `INSERT INTO blog_post_tags (blog_post_id, tag_id) VALUES ${tagValues}`,
+        [id, ...tagIds]
+      );
+    }
+
+    // Fetch the complete post with tags
+    const postWithTags = await client.query(`
+      SELECT bp.*,
+        COALESCE(
+          json_agg(
+            json_build_object('id', t.id, 'name', t.name, 'slug', t.slug, 'color', t.color)
+          ) FILTER (WHERE t.id IS NOT NULL),
+          '[]'
+        ) as tags
+      FROM blog_posts bp
+      LEFT JOIN blog_post_tags bpt ON bp.id = bpt.blog_post_id
+      LEFT JOIN tags t ON bpt.tag_id = t.id
+      WHERE bp.id = $1
+      GROUP BY bp.id
+    `, [id]);
+
+    await client.query('COMMIT');
+    res.json({ post: postWithTags.rows[0] });
   } catch (error) {
+    await client.query('ROLLBACK');
     logger.error('Error updating blog post:', error);
     if (error.code === '23505') {
       res.status(409).json({ error: 'A post with this title already exists' });
     } else {
       res.status(500).json({ error: 'Failed to update blog post' });
     }
+  } finally {
+    client.release();
   }
 });
 

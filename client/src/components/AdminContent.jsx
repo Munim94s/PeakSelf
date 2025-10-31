@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import ContentEditor from './ContentEditor';
+import AdminTags from './AdminTags';
 import SkeletonGrid from './SkeletonGrid';
 import { apiClient, endpoints, response } from '../api';
 import { useModal } from '../contexts/ModalContext';
@@ -9,6 +10,7 @@ import './AdminSessions.css';
 
 export default function AdminContent() {
   const modal = useModal();
+  const [activeTab, setActiveTab] = useState('posts');
   const [showEditor, setShowEditor] = useState(false);
   const [posts, setPosts] = useState([]);
   const [editingPost, setEditingPost] = useState(null);
@@ -98,25 +100,67 @@ export default function AdminContent() {
           </button>
         </div>
         <div className="traffic-chip-row">
-          <button className="traffic-chip" type="button">All Posts</button>
-          <button className="traffic-chip" type="button">Drafts</button>
-          <button className="traffic-chip" type="button">Categories</button>
+          <button 
+            className={`traffic-chip ${activeTab === 'posts' ? 'active' : ''}`} 
+            type="button"
+            onClick={() => setActiveTab('posts')}
+          >
+            All Posts
+          </button>
+          <button 
+            className={`traffic-chip ${activeTab === 'drafts' ? 'active' : ''}`} 
+            type="button"
+            onClick={() => setActiveTab('drafts')}
+          >
+            Drafts
+          </button>
+          <button 
+            className={`traffic-chip ${activeTab === 'tags' ? 'active' : ''}`} 
+            type="button"
+            onClick={() => setActiveTab('tags')}
+          >
+            Tags
+          </button>
         </div>
       </div>
 
-      <div className="card-grid">
-        {posts.map((p) => (
-          <div key={p.id} className="content-card">
-            <div className="content-title">{p.title}</div>
-            <div className="content-excerpt">{p.excerpt}</div>
-            <div className="row-actions">
-              <button className="btn small" onClick={() => handleEditPost(p)}>Edit</button>
-              <button className="btn small">Publish</button>
-              <button className="btn small danger" onClick={() => handleDeletePost(p.id)}>Delete</button>
-            </div>
-          </div>
-        ))}
-      </div>
+      {activeTab === 'tags' ? (
+        <AdminTags />
+      ) : (
+        <div className="card-grid">
+          {posts
+            .filter(p => activeTab === 'drafts' ? p.status === 'draft' : true)
+            .map((p) => (
+              <div key={p.id} className="content-card">
+                <div className="content-title">{p.title}</div>
+                <div className="content-excerpt">{p.excerpt}</div>
+                {p.tags && p.tags.length > 0 && (
+                  <div className="content-tags">
+                    {p.tags.map(tag => (
+                      <span 
+                        key={tag.id} 
+                        className="post-tag"
+                        style={{ 
+                          backgroundColor: `${tag.color}20`,
+                          color: tag.color,
+                          borderColor: tag.color
+                        }}
+                      >
+                        {tag.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="row-actions">
+                  <button className="btn small" onClick={() => handleEditPost(p)}>Edit</button>
+                  <button className="btn small">Publish</button>
+                  <button className="btn small danger" onClick={() => handleDeletePost(p.id)}>Delete</button>
+                </div>
+              </div>
+            ))
+          }
+        </div>
+      )}
 
       {showEditor && (
         <ContentEditor 

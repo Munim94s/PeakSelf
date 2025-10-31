@@ -21,11 +21,13 @@
   display: flex;
   flex-direction: column;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
 }
 
 .editor-header {
   padding: 1.5rem;
   border-bottom: 1px solid #e5e5e5;
+  flex-shrink: 0;
 }
 
 .title-input {
@@ -37,10 +39,63 @@
   font-family: inherit;
   padding: 0.5rem;
   background: transparent;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .title-input::placeholder {
   color: #aaa;
+}
+
+/* Tags Section */
+.tags-section {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #f0f0f0;
+}
+
+.tags-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #555;
+  margin-bottom: 0.5rem;
+}
+
+.tags-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tag-chip {
+  padding: 0.4rem 0.875rem;
+  border-radius: 20px;
+  border: 2px solid;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: transparent;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.tag-chip:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.tag-chip.selected {
+  font-weight: 600;
+}
+
+.no-tags-message {
+  color: #999;
+  font-size: 0.875rem;
+  font-style: italic;
 }
 
 .editor-toolbar {
@@ -50,6 +105,7 @@
   border-bottom: 1px solid #e5e5e5;
   background: #f9f9f9;
   flex-wrap: wrap;
+  flex-shrink: 0;
 }
 
 .toolbar-btn {
@@ -92,11 +148,13 @@
   flex: 1;
   padding: 1.5rem;
   overflow-y: auto;
+  overflow-x: hidden;
   outline: none;
   font-size: 1rem;
   line-height: 1.7;
-  min-height: 300px;
-  max-height: 500px;
+  min-height: 200px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .editor-content:empty:before {
@@ -180,6 +238,7 @@
   padding: 1.25rem 1.5rem;
   border-top: 1px solid #e5e5e5;
   background: #f9f9f9;
+  flex-shrink: 0;
 }
 
 .btn-primary,

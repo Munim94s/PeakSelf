@@ -42,6 +42,15 @@ export const blog = {
   uploadImage: `${API}/admin/blog/upload-image`,
 };
 
+// Tags endpoints
+export const tags = {
+  list: `${API}/admin/tags`,
+  byId: (id) => `${API}/admin/tags/${id}`,
+  create: `${API}/admin/tags`,
+  update: (id) => `${API}/admin/tags/${id}`,
+  delete: (id) => `${API}/admin/tags/${id}`,
+};
+
 // Admin endpoints
 export const admin = {
   // Dashboard
@@ -106,6 +115,7 @@ export default {
   user,
   newsletter,
   blog,
+  tags,
   admin,
   util,
 };

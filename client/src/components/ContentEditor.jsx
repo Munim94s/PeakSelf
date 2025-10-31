@@ -11,9 +11,26 @@ export default function ContentEditor({ onSave, onCancel, initialPost }) {
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [linkText, setLinkText] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
+  const [tags, setTags] = useState([]);
+  const [selectedTags, setSelectedTags] = useState(initialPost?.tags?.map(t => t.id) || []);
   const editorRef = useRef(null);
   const fileInputRef = useRef(null);
   const savedSelectionRef = useRef(null);
+
+  // Load available tags
+  React.useEffect(() => {
+    const loadTags = async () => {
+      try {
+        const { data } = await apiClient.get(endpoints.tags.list);
+        // Ensure tags is always an array
+        setTags(Array.isArray(data) ? data : data?.tags || []);
+      } catch (error) {
+        console.error('Failed to load tags:', error);
+        setTags([]);
+      }
+    };
+    loadTags();
+  }, []);
 
   // Load initial content if editing
   React.useEffect(() => {
@@ -188,12 +205,21 @@ export default function ContentEditor({ onSave, onCancel, initialPost }) {
     }
   };
 
+  const toggleTag = (tagId) => {
+    setSelectedTags(prev => 
+      prev.includes(tagId) 
+        ? prev.filter(id => id !== tagId)
+        : [...prev, tagId]
+    );
+  };
+
   const handleSave = () => {
     const editorContent = editorRef.current.innerHTML;
     onSave({
       title,
       content: editorContent,
-      excerpt: editorRef.current.innerText.substring(0, 150)
+      excerpt: editorRef.current.innerText.substring(0, 150),
+      tagIds: selectedTags
     });
   };
 
@@ -208,6 +234,31 @@ export default function ContentEditor({ onSave, onCancel, initialPost }) {
             onChange={(e) => setTitle(e.target.value)}
             className="title-input"
           />
+          
+          <div className="tags-section">
+            <label className="tags-label">Tags:</label>
+            <div className="tags-selector">
+              {tags.length === 0 ? (
+                <span className="no-tags-message">No tags available. Create tags first in the Tags tab.</span>
+              ) : (
+                tags.map(tag => (
+                  <button
+                    key={tag.id}
+                    type="button"
+                    onClick={() => toggleTag(tag.id)}
+                    className={`tag-chip ${selectedTags.includes(tag.id) ? 'selected' : ''}`}
+                    style={{
+                      backgroundColor: selectedTags.includes(tag.id) ? tag.color : 'transparent',
+                      borderColor: tag.color,
+                      color: selectedTags.includes(tag.id) ? '#fff' : tag.color
+                    }}
+                  >
+                    {tag.name}
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
         </div>
 
         <div className="editor-toolbar">

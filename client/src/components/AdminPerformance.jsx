@@ -16,17 +16,16 @@ export default function AdminPerformance() {
   const [currentPage, setCurrentPage] = useState(1);
   const [resetting, setResetting] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, [orderBy, filter, currentPage]);
-
-  async function loadData() {
+  async function loadData(customOrderBy = null, customFilter = null, customPage = null) {
     setLoading(true);
     setError('');
     try {
+      const actualOrderBy = customOrderBy ?? orderBy;
+      const actualFilter = customFilter ?? filter;
+      const actualPage = customPage ?? currentPage;
       const [summaryRes, queriesRes] = await Promise.all([
         apiClient.get('/api/admin/performance/summary'),
-        apiClient.get(`/api/admin/performance/queries?order_by=${orderBy}&filter=${filter}&page=${currentPage}&limit=20`)
+        apiClient.get(`/api/admin/performance/queries?order_by=${actualOrderBy}&filter=${actualFilter}&page=${actualPage}&limit=20`)
       ]);
       setSummary(summaryRes.data);
       setQueries(queriesRes.data.queries);
@@ -37,6 +36,10 @@ export default function AdminPerformance() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    loadData();
+  }, [orderBy, filter, currentPage]);
 
   async function handleReset() {
     if (!confirm('Reset all query statistics? This will clear all tracked performance data.')) {
@@ -188,8 +191,10 @@ export default function AdminPerformance() {
             <select
               value={filter}
               onChange={(e) => {
-                setFilter(e.target.value);
+                const newFilter = e.target.value;
+                setFilter(newFilter);
                 setCurrentPage(1);
+                loadData(null, newFilter, 1);
               }}
               style={{
                 padding: '0.5rem',
@@ -208,7 +213,11 @@ export default function AdminPerformance() {
             </select>
             <select
               value={orderBy}
-              onChange={(e) => setOrderBy(e.target.value)}
+              onChange={(e) => {
+                const newOrderBy = e.target.value;
+                setOrderBy(newOrderBy);
+                loadData(newOrderBy, null, null);
+              }}
               style={{
                 padding: '0.5rem',
                 borderRadius: 6,
@@ -227,7 +236,7 @@ export default function AdminPerformance() {
           </div>
         </div>
 
-        {queries.length === 0 ? (
+        {!queries || queries.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
             No query data available yet. Queries will appear as they are executed.
           </div>
@@ -302,27 +311,27 @@ export default function AdminPerformance() {
           }}>
             <button
               onClick={() => setCurrentPage(currentPage - 1)}
-              disabled={!pagination.has_prev}
+              disabled={!pagination?.has_prev}
               style={{
                 padding: '0.5rem 1rem',
                 borderRadius: 6,
                 border: '1px solid #d0d0d0',
-                background: pagination.has_prev ? '#fff' : '#f5f5f5',
-                color: pagination.has_prev ? '#333' : '#999',
+                background: pagination?.has_prev ? '#fff' : '#f5f5f5',
+                color: pagination?.has_prev ? '#333' : '#999',
                 fontSize: 12,
                 fontWeight: 600,
-                cursor: pagination.has_prev ? 'pointer' : 'not-allowed'
+                cursor: pagination?.has_prev ? 'pointer' : 'not-allowed'
               }}
             >
               Previous
             </button>
             
             <div style={{ display: 'flex', gap: 4 }}>
-              {Array.from({ length: pagination.total_pages }, (_, i) => i + 1)
+              {Array.from({ length: pagination?.total_pages || 1 }, (_, i) => i + 1)
                 .filter(p => {
                   // Show first, last, current, and neighbors
                   return p === 1 || 
-                         p === pagination.total_pages || 
+                         p === (pagination?.total_pages || 1) || 
                          Math.abs(p - currentPage) <= 1;
                 })
                 .map((p, idx, arr) => {
@@ -373,23 +382,23 @@ export default function AdminPerformance() {
             
             <button
               onClick={() => setCurrentPage(currentPage + 1)}
-              disabled={!pagination.has_next}
+              disabled={!pagination?.has_next}
               style={{
                 padding: '0.5rem 1rem',
                 borderRadius: 6,
                 border: '1px solid #d0d0d0',
-                background: pagination.has_next ? '#fff' : '#f5f5f5',
-                color: pagination.has_next ? '#333' : '#999',
+                background: pagination?.has_next ? '#fff' : '#f5f5f5',
+                color: pagination?.has_next ? '#333' : '#999',
                 fontSize: 12,
                 fontWeight: 600,
-                cursor: pagination.has_next ? 'pointer' : 'not-allowed'
+                cursor: pagination?.has_next ? 'pointer' : 'not-allowed'
               }}
             >
               Next
             </button>
             
             <span style={{ marginLeft: '1rem', fontSize: 12, color: '#666' }}>
-              Page {pagination.current_page} of {pagination.total_pages}
+              Page {pagination?.current_page || 1} of {pagination?.total_pages || 1}
             </span>
           </div>
         )}
@@ -433,6 +442,7 @@ function fmt(val) {
 }
 
 function truncateQuery(query) {
+  if (!query) return '';
   const cleaned = query.replace(/\s+/g, ' ').trim();
   return cleaned.length > 100 ? cleaned.substring(0, 100) + '...' : cleaned;
 }
