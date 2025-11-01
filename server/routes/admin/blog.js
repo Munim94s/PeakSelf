@@ -89,7 +89,7 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   const client = await pool.connect();
   try {
-    const { title, content, excerpt, status = 'draft', tagIds = [] } = req.body;
+    const { title, content, excerpt, image, status = 'draft', tagIds = [] } = req.body;
 
     if (!title || !content) {
       return res.status(400).json({ error: 'Title and content are required' });
@@ -101,10 +101,10 @@ router.post('/', async (req, res) => {
     await client.query('BEGIN');
 
     const result = await client.query(
-      `INSERT INTO blog_posts (title, content, excerpt, slug, status, author_id)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO blog_posts (title, content, excerpt, slug, status, author_id, image)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
-      [title, content, excerpt, slug, status, authorId]
+      [title, content, excerpt, slug, status, authorId, image || null]
     );
 
     const postId = result.rows[0].id;
@@ -157,7 +157,7 @@ router.put('/:id', async (req, res) => {
   const client = await pool.connect();
   try {
     const { id } = req.params;
-    const { title, content, excerpt, status, tagIds = [] } = req.body;
+    const { title, content, excerpt, image, status, tagIds = [] } = req.body;
 
     if (!title || !content) {
       return res.status(400).json({ error: 'Title and content are required' });
@@ -169,10 +169,10 @@ router.put('/:id', async (req, res) => {
 
     const result = await client.query(
       `UPDATE blog_posts 
-       SET title = $1, content = $2, excerpt = $3, slug = $4, status = $5, updated_at = NOW()
-       WHERE id = $6
+       SET title = $1, content = $2, excerpt = $3, slug = $4, status = $5, image = $6, updated_at = NOW()
+       WHERE id = $7
        RETURNING *`,
-      [title, content, excerpt, slug, status, id]
+      [title, content, excerpt, slug, status, image || null, id]
     );
 
     if (result.rows.length === 0) {
@@ -226,6 +226,44 @@ router.put('/:id', async (req, res) => {
     }
   } finally {
     client.release();
+  }
+});
+
+// PATCH /api/admin/blog/:id/publish - Toggle publish status
+router.patch('/:id/publish', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Get current status
+    const currentPost = await pool.query(
+      'SELECT status FROM blog_posts WHERE id = $1',
+      [id]
+    );
+    
+    if (currentPost.rows.length === 0) {
+      return res.status(404).json({ error: 'Blog post not found' });
+    }
+    
+    const currentStatus = currentPost.rows[0].status;
+    const newStatus = currentStatus === 'published' ? 'draft' : 'published';
+    const publishedAt = newStatus === 'published' ? new Date() : null;
+    
+    // Update status
+    const result = await pool.query(
+      `UPDATE blog_posts 
+       SET status = $1, published_at = $2, updated_at = NOW()
+       WHERE id = $3
+       RETURNING id, title, status`,
+      [newStatus, publishedAt, id]
+    );
+    
+    res.json({ 
+      post: result.rows[0],
+      message: newStatus === 'published' ? 'Post published successfully' : 'Post unpublished successfully'
+    });
+  } catch (error) {
+    logger.error('Error toggling publish status:', error);
+    res.status(500).json({ error: 'Failed to update publish status' });
   }
 });
 

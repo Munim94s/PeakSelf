@@ -8,6 +8,7 @@ import AdminUsers from '../components/AdminUsers';
 import AdminContent from '../components/AdminContent';
 import AdminSessions from '../components/AdminSessions';
 import AdminPerformance from '../components/AdminPerformance';
+import ContentEditorPage from './ContentEditorPage';
 
 export default function Admin() {
   const [user, setUser] = useState(null);
@@ -145,6 +146,8 @@ export default function Admin() {
           <Route path="sessions" element={<AdminSessions />} />
           <Route path="users" element={<AdminUsers />} />
           <Route path="content" element={<AdminContent />} />
+          <Route path="content/new" element={<ContentEditorPage />} />
+          <Route path="content/edit" element={<ContentEditorPage />} />
           <Route path="performance" element={<AdminPerformance />} />
           <Route path="settings" element={<AdminSettings />} />
         </Routes>

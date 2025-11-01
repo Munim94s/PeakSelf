@@ -9,9 +9,10 @@ import React from 'react';
  */
 const SkeletonSessionCards = ({ count = 6 }) => {
   const baseStyle = {
-    backgroundColor: '#f0f0f0',
+    background: 'linear-gradient(90deg, #f0f0f0 0%, #e0e0e0 50%, #f0f0f0 100%)',
+    backgroundSize: '1000px 100%',
     borderRadius: '8px',
-    animation: 'pulse 1.5s ease-in-out infinite'
+    animation: 'shimmer 2s infinite linear'
   };
 
   return (
@@ -46,8 +47,7 @@ const SkeletonSessionCards = ({ count = 6 }) => {
               height: 52,
               minWidth: 52,
               borderRadius: 12, 
-              backgroundColor: '#f0f0f0',
-              animation: 'pulse 1.5s ease-in-out infinite'
+              ...baseStyle
             }} />
 
             {/* Content */}

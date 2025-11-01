@@ -256,8 +256,20 @@ main {
 
 .recent-cards-container {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: 1fr;
   gap: 2rem;
+}
+
+@media (min-width: 640px) {
+  .recent-cards-container {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .recent-cards-container {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 
@@ -392,12 +404,19 @@ main {
 
 @keyframes pulse {
   0%, 100% { 
-    transform: scale(1);
     opacity: 1;
   }
   50% { 
-    transform: scale(0.6);
     opacity: 0.5;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
   }
 }
 

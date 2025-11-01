@@ -10,9 +10,10 @@ import React from 'react';
  */
 const SkeletonTable = ({ rows = 5, columns = 5 }) => {
   const baseStyle = {
-    backgroundColor: '#f0f0f0',
+    background: 'linear-gradient(90deg, #f0f0f0 0%, #e0e0e0 50%, #f0f0f0 100%)',
+    backgroundSize: '1000px 100%',
     borderRadius: '6px',
-    animation: 'pulse 1.5s ease-in-out infinite',
+    animation: 'shimmer 2s infinite linear',
     height: '16px'
   };
 

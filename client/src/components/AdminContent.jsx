@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Plus } from 'lucide-react';
-import ContentEditor from './ContentEditor';
 import AdminTags from './AdminTags';
 import SkeletonGrid from './SkeletonGrid';
 import { apiClient, endpoints, response } from '../api';
@@ -10,10 +10,9 @@ import './AdminSessions.css';
 
 export default function AdminContent() {
   const modal = useModal();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('posts');
-  const [showEditor, setShowEditor] = useState(false);
   const [posts, setPosts] = useState([]);
-  const [editingPost, setEditingPost] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -34,32 +33,12 @@ export default function AdminContent() {
     }
   };
 
-  const handleSavePost = async (postData) => {
-    try {
-      if (editingPost) {
-        // Update existing post
-        const { data } = await apiClient.put(endpoints.blog.update(editingPost.id), postData);
-        setPosts(posts.map(p => p.id === editingPost.id ? data.post : p));
-        setEditingPost(null);
-      } else {
-        // Create new post
-        const { data } = await apiClient.post(endpoints.blog.create, postData);
-        setPosts([data.post, ...posts]);
-      }
-      setShowEditor(false);
-    } catch (err) {
-      await modal.alert(response.getErrorMessage(err), 'Error');
-    }
-  };
-
   const handleEditPost = (post) => {
-    setEditingPost(post);
-    setShowEditor(true);
+    navigate(`/admin/content/edit?id=${post.id}`);
   };
 
-  const handleCancel = () => {
-    setShowEditor(false);
-    setEditingPost(null);
+  const handleCreatePost = () => {
+    navigate('/admin/content/new');
   };
 
   const handleDeletePost = async (postId) => {
@@ -69,6 +48,16 @@ export default function AdminContent() {
     try {
       await apiClient.delete(endpoints.blog.delete(postId));
       setPosts(posts.filter(p => p.id !== postId));
+    } catch (err) {
+      await modal.alert(response.getErrorMessage(err), 'Error');
+    }
+  };
+
+  const handleTogglePublish = async (postId, currentStatus) => {
+    try {
+      const { data } = await apiClient.patch(endpoints.blog.publish(postId));
+      setPosts(posts.map(p => p.id === postId ? { ...p, status: data.post.status } : p));
+      await modal.alert(data.message, 'Success');
     } catch (err) {
       await modal.alert(response.getErrorMessage(err), 'Error');
     }
@@ -93,7 +82,7 @@ export default function AdminContent() {
           <div className="title">Content</div>
           <button 
             className="add-content-btn" 
-            onClick={() => setShowEditor(true)}
+            onClick={handleCreatePost}
             title="Add Content"
           >
             <Plus size={20} />
@@ -153,21 +142,18 @@ export default function AdminContent() {
                 )}
                 <div className="row-actions">
                   <button className="btn small" onClick={() => handleEditPost(p)}>Edit</button>
-                  <button className="btn small">Publish</button>
+                  <button 
+                    className="btn small" 
+                    onClick={() => handleTogglePublish(p.id, p.status)}
+                  >
+                    {p.status === 'published' ? 'Unpublish' : 'Publish'}
+                  </button>
                   <button className="btn small danger" onClick={() => handleDeletePost(p.id)}>Delete</button>
                 </div>
               </div>
             ))
           }
         </div>
-      )}
-
-      {showEditor && (
-        <ContentEditor 
-          onSave={handleSavePost} 
-          onCancel={handleCancel}
-          initialPost={editingPost}
-        />
       )}
     </div>
   );

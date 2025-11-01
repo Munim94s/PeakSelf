@@ -39,6 +39,7 @@ export const blog = {
   create: `${API}/admin/blog`,
   update: (id) => `${API}/admin/blog/${id}`,
   delete: (id) => `${API}/admin/blog/${id}`,
+  publish: (id) => `${API}/admin/blog/${id}/publish`,
   uploadImage: `${API}/admin/blog/upload-image`,
 };
 

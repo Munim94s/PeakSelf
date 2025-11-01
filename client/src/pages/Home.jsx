@@ -1,17 +1,30 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, TrendingUp, Users, BookOpen } from 'lucide-react';
 import PostList from '../components/PostList';
 import PostCard from '../components/PostCard';
-import { blogPosts } from '../data/blogPosts';
 import { apiClient, endpoints, response } from '../api';
 import { useModal } from '../contexts/ModalContext';
 import './Home.css';
 
 const Home = () => {
   const modal = useModal();
-  const featuredPost = blogPosts.find(post => post.featured);
-  const recentPosts = blogPosts.filter(post => !post.featured).slice(0, 5);
+  const [recentPosts, setRecentPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPosts = async () => {
+      try {
+        const { data } = await apiClient.get(endpoints.blog.list + '?limit=6');
+        setRecentPosts(data.posts || data);
+      } catch (err) {
+        console.error('Failed to fetch posts:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPosts();
+  }, []);
 
   return (
     <div className="home-container">
@@ -79,31 +92,6 @@ const Home = () => {
       </section>
 
 
-      {/* Featured Article */}
-      <section className="featured-section">
-        <div className="container">
-          <div className="text-center mb-16">
-            <div className="featured-badge">
-              <span className="featured-badge-text">
-                Featured
-              </span>
-            </div>
-            <h2 className="featured-title">
-              Editor's Choice
-            </h2>
-            <p className="featured-description">
-              Our most impactful article that's changing how people think about technology and growth
-            </p>
-          </div>
-          
-{featuredPost && (
-            <div className="featured-card-container">
-              <PostCard post={featuredPost} featured={true} showMeta={false} />
-            </div>
-          )}
-        </div>
-      </section>
-
       {/* Recent Articles */}
       <section className="recent-section">
         <div className="container">
@@ -123,9 +111,15 @@ const Home = () => {
           </div>
           
           <div className="recent-cards-container">
-{recentPosts.map((post) => (
-              <PostCard key={post.id} post={post} showMeta={false} />
-            ))}
+            {loading ? (
+              <p style={{textAlign: 'center', width: '100%'}}>Loading articles...</p>
+            ) : recentPosts.length > 0 ? (
+              recentPosts.map((post) => (
+                <PostCard key={post.id} post={post} showMeta={false} />
+              ))
+            ) : (
+              <p style={{textAlign: 'center', width: '100%'}}>No articles found.</p>
+            )}
           </div>
           
           <div className="text-center" style={{marginTop: '3rem'}}>

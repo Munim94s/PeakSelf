@@ -7,14 +7,19 @@ import './ContentEditor.css';
 export default function ContentEditor({ onSave, onCancel, initialPost }) {
   const modal = useModal();
   const [title, setTitle] = useState(initialPost?.title || '');
+  const [excerpt, setExcerpt] = useState(initialPost?.excerpt || '');
+  const [featuredImage, setFeaturedImage] = useState(initialPost?.image || '');
+  const [uploadingFeatured, setUploadingFeatured] = useState(false);
   const [content, setContent] = useState([]);
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [linkText, setLinkText] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
   const [tags, setTags] = useState([]);
   const [selectedTags, setSelectedTags] = useState(initialPost?.tags?.map(t => t.id) || []);
+  const [showTags, setShowTags] = useState(false);
   const editorRef = useRef(null);
   const fileInputRef = useRef(null);
+  const featuredImageInputRef = useRef(null);
   const savedSelectionRef = useRef(null);
 
   // Load available tags
@@ -213,19 +218,58 @@ export default function ContentEditor({ onSave, onCancel, initialPost }) {
     );
   };
 
+  const handleFeaturedImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    if (!file.type.startsWith('image/')) {
+      await modal.alert('Please select an image file', 'Invalid File');
+      return;
+    }
+    
+    try {
+      setUploadingFeatured(true);
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      const { data } = await apiClient.upload(endpoints.blog.uploadImage, formData);
+      setFeaturedImage(data.url);
+    } catch (error) {
+      await modal.alert(`Failed to upload image: ${error.message}`, 'Upload Error');
+    } finally {
+      setUploadingFeatured(false);
+      e.target.value = '';
+    }
+  };
+
   const handleSave = () => {
     const editorContent = editorRef.current.innerHTML;
     onSave({
       title,
+      image: featuredImage,
       content: editorContent,
-      excerpt: editorRef.current.innerText.substring(0, 150),
+      excerpt: excerpt || editorRef.current.innerText.substring(0, 150),
       tagIds: selectedTags
     });
   };
 
   return (
-    <div className="content-editor-overlay">
-      <div className="content-editor-modal">
+    <div className="content-editor-page">
+      <div className="content-editor-container">
+        <div className="editor-top-bar">
+          <div className="editor-title-row">
+            <h3 className="editor-heading">{initialPost ? 'Edit Post' : 'New Post'}</h3>
+            <div className="editor-actions-top">
+              <button onClick={onCancel} className="btn-cancel-top">
+                Cancel
+              </button>
+              <button onClick={handleSave} className="btn-save-top">
+                Save Post
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div className="editor-header">
           <input
             type="text"
@@ -235,29 +279,83 @@ export default function ContentEditor({ onSave, onCancel, initialPost }) {
             className="title-input"
           />
           
-          <div className="tags-section">
-            <label className="tags-label">Tags:</label>
-            <div className="tags-selector">
-              {tags.length === 0 ? (
-                <span className="no-tags-message">No tags available. Create tags first in the Tags tab.</span>
-              ) : (
-                tags.map(tag => (
-                  <button
-                    key={tag.id}
-                    type="button"
-                    onClick={() => toggleTag(tag.id)}
-                    className={`tag-chip ${selectedTags.includes(tag.id) ? 'selected' : ''}`}
-                    style={{
-                      backgroundColor: selectedTags.includes(tag.id) ? tag.color : 'transparent',
-                      borderColor: tag.color,
-                      color: selectedTags.includes(tag.id) ? '#fff' : tag.color
-                    }}
+          <textarea
+            placeholder="Brief description (optional - used for previews and SEO)"
+            value={excerpt}
+            onChange={(e) => setExcerpt(e.target.value)}
+            className="excerpt-input"
+            rows="2"
+            maxLength="250"
+          />
+          
+          <div className="featured-image-section">
+            <div className="featured-image-row">
+              <label className="featured-image-label">Featured Image</label>
+              {featuredImage ? (
+                <div className="featured-image-compact">
+                  <img src={featuredImage} alt="Featured" />
+                  <button 
+                    type="button" 
+                    onClick={() => setFeaturedImage('')}
+                    className="remove-image-compact"
+                    title="Remove image"
                   >
-                    {tag.name}
+                    ×
                   </button>
-                ))
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => featuredImageInputRef.current.click()}
+                  className="upload-featured-compact"
+                  disabled={uploadingFeatured}
+                  title="Upload featured image"
+                >
+                  {uploadingFeatured ? 'Uploading...' : '+ Add Image'}
+                </button>
               )}
+              <input
+                ref={featuredImageInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFeaturedImageUpload}
+                style={{ display: 'none' }}
+              />
             </div>
+          </div>
+          
+          <div className="tags-section">
+            <button 
+              type="button"
+              className="tags-toggle"
+              onClick={() => setShowTags(!showTags)}
+            >
+              Tags {selectedTags.length > 0 && `(${selectedTags.length})`}
+              <span className={`arrow ${showTags ? 'open' : ''}`}>▼</span>
+            </button>
+            {showTags && (
+              <div className="tags-selector">
+                {tags.length === 0 ? (
+                  <span className="no-tags-message">No tags available. Create tags first in the Tags tab.</span>
+                ) : (
+                  tags.map(tag => (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      onClick={() => toggleTag(tag.id)}
+                      className={`tag-chip ${selectedTags.includes(tag.id) ? 'selected' : ''}`}
+                      style={{
+                        backgroundColor: selectedTags.includes(tag.id) ? tag.color : 'transparent',
+                        borderColor: tag.color,
+                        color: selectedTags.includes(tag.id) ? '#fff' : tag.color
+                      }}
+                    >
+                      {tag.name}
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -319,15 +417,6 @@ export default function ContentEditor({ onSave, onCancel, initialPost }) {
           onKeyDown={handleKeyDown}
           suppressContentEditableWarning
         >
-        </div>
-
-        <div className="editor-actions">
-          <button onClick={onCancel} className="btn-secondary">
-            Cancel
-          </button>
-          <button onClick={handleSave} className="btn-primary">
-            Save Post
-          </button>
         </div>
 
         {showLinkModal && (

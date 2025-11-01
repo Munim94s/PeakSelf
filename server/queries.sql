@@ -109,6 +109,7 @@ CREATE TABLE IF NOT EXISTS blog_posts (
   slug VARCHAR(255) UNIQUE,
   status VARCHAR(20) DEFAULT 'draft',
   author_id UUID REFERENCES users(id),
+  image TEXT,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW(),
   published_at TIMESTAMP
@@ -117,6 +118,34 @@ CREATE TABLE IF NOT EXISTS blog_posts (
 CREATE INDEX IF NOT EXISTS idx_blog_posts_status ON blog_posts(status);
 CREATE INDEX IF NOT EXISTS idx_blog_posts_slug ON blog_posts(slug);
 CREATE INDEX IF NOT EXISTS idx_blog_posts_status_time ON blog_posts(status, created_at DESC);
+
+-- ============================================================================
+-- TAGS TABLE
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS tags (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100) NOT NULL UNIQUE,
+  slug VARCHAR(100) NOT NULL UNIQUE,
+  color VARCHAR(7) DEFAULT '#3b82f6',
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_tags_slug ON tags(slug);
+
+-- ============================================================================
+-- BLOG POST TAGS JUNCTION TABLE
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS blog_post_tags (
+  id SERIAL PRIMARY KEY,
+  blog_post_id INTEGER REFERENCES blog_posts(id) ON DELETE CASCADE,
+  tag_id INTEGER REFERENCES tags(id) ON DELETE CASCADE,
+  created_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(blog_post_id, tag_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_blog_post_tags_post ON blog_post_tags(blog_post_id);
+CREATE INDEX IF NOT EXISTS idx_blog_post_tags_tag ON blog_post_tags(tag_id);
 
 -- ============================================================================
 -- VISITORS & SESSION TRACKING TABLES
@@ -258,13 +287,14 @@ FROM u, n, sess, otr;
 --   1. Users table with OAuth support, roles, and soft delete
 --   2. Pending registrations for email verification flow
 --   3. Newsletter subscriptions with soft delete support
---   4. Blog posts with slug-based routing
---   5. Visitor and session tracking for analytics
---   6. Traffic events for simplified analytics
---   7. Dashboard view for real-time metrics
---   8. Performance indexes for optimized queries
---   9. Soft delete support on users, visitors, and newsletter_subscriptions
---  10. pg_stat_statements extension for query performance monitoring
+--   4. Blog posts with slug-based routing, images, and tags
+--   5. Tags system for blog posts (tags and blog_post_tags junction table)
+--   6. Visitor and session tracking for analytics
+--   7. Traffic events for simplified analytics
+--   8. Dashboard view for real-time metrics
+--   9. Performance indexes for optimized queries
+--  10. Soft delete support on users, visitors, and newsletter_subscriptions
+--  11. pg_stat_statements extension for query performance monitoring
 --
 -- To use this schema:
 --   1. Create a fresh PostgreSQL database

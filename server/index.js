@@ -148,6 +148,7 @@ async function setupRoutes() {
   const { default: trackRouter } = await import("./routes/track.js");
   const { default: healthRouter } = await import("./routes/health.js");
   const { default: errorsRouter } = await import("./routes/errors.js");
+  const { default: blogRouter } = await import("./routes/blog.js");
   
   // Health check endpoints (no rate limiting for monitoring)
   app.use("/api/health", healthRouter);
@@ -158,6 +159,7 @@ async function setupRoutes() {
   // Apply specific rate limiters to routes
   // Note: auth routes have their own specific limiters (password, OAuth, general) applied per-endpoint
   app.use("/api/auth", authRouter);
+  app.use("/api/blog", globalLimiter, blogRouter);
   app.use("/api/subscribe", subscribeLimiter, subscribeRouter);
   app.use("/api/admin", adminLimiter, adminRouter);
   app.use("/api/track", trackingLimiter, trackRouter);

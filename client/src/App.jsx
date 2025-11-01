@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from 'react';
+import React, { lazy, Suspense, useEffect } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -22,6 +22,11 @@ const RateLimit = lazy(() => import('./pages/RateLimit'));
 function App() {
   const location = useLocation();
   const hideFooter = location.pathname.startsWith('/admin');
+  
+  // Scroll to top on route change
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
   
   return (
     <ModalProvider>

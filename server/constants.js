@@ -90,10 +90,10 @@ export const RATE_LIMITS = {
     max: 3,
   },
   
-  /** Admin endpoints: 60 requests per 15 minutes */
+  /** Admin endpoints: 100 requests per 15 minutes */
   ADMIN: {
     windowMs: RATE_LIMIT_WINDOW_15MIN,
-    max: 60,
+    max: 100,
   },
   
   /** Tracking endpoints: 500 requests per 15 minutes */

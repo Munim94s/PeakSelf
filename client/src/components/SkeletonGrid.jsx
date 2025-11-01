@@ -10,9 +10,10 @@ import React from 'react';
  */
 const SkeletonGrid = ({ cards = 8, type = 'stat' }) => {
   const baseStyle = {
-    backgroundColor: '#f0f0f0',
+    background: 'linear-gradient(90deg, #f0f0f0 0%, #e0e0e0 50%, #f0f0f0 100%)',
+    backgroundSize: '1000px 100%',
     borderRadius: '8px',
-    animation: 'pulse 1.5s ease-in-out infinite'
+    animation: 'shimmer 2s infinite linear'
   };
 
   if (type === 'content') {
