@@ -7,8 +7,8 @@ import dotenv from 'dotenv';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Load environment variables
-dotenv.config({ path: join(__dirname, '../../.env') });
+// Load environment variables from server directory
+dotenv.config({ path: join(__dirname, '../.env') });
 
 const { Pool } = pg;
 
@@ -26,63 +26,62 @@ async function runMigration() {
     client = await pool.connect();
     console.log('✅ Connected to database\n');
     
-    // Read the migration SQL file
-    const migrationSQL = fs.readFileSync(
-      join(__dirname, 'add_pending_registrations.sql'),
-      'utf8'
-    );
+    // Import and run the niches migration
+    console.log('🔄 Running niches migration...');
+    console.log('   Creating niches table and adding niche_id to blog_posts...');
     
-    console.log('🔄 Running migration...');
-    console.log('   Creating pending_registrations table...');
-    
-    await client.query(migrationSQL);
+    const { up } = await import('./create_niches.js');
+    await up();
     
     console.log('✅ Migration completed successfully!\n');
     
-    // Verify table was created
-    const checkTable = await client.query(`
+    // Verify tables were created/updated
+    const checkNichesTable = await client.query(`
       SELECT EXISTS (
         SELECT FROM information_schema.tables 
         WHERE table_schema = 'public' 
-        AND table_name = 'pending_registrations'
+        AND table_name = 'niches'
       );
     `);
     
-    if (checkTable.rows[0].exists) {
-      console.log('✅ Verified: pending_registrations table exists');
+    const checkNicheColumn = await client.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'blog_posts'
+        AND column_name = 'niche_id'
+      );
+    `);
+    
+    if (checkNichesTable.rows[0].exists) {
+      console.log('✅ Verified: niches table exists');
       
       // Check columns
       const columns = await client.query(`
         SELECT column_name, data_type 
         FROM information_schema.columns 
-        WHERE table_name = 'pending_registrations'
+        WHERE table_name = 'niches'
         ORDER BY ordinal_position;
       `);
       
-      console.log('\n📋 Table structure:');
+      console.log('\n📋 Niches table structure:');
       columns.rows.forEach(col => {
         console.log(`   - ${col.column_name}: ${col.data_type}`);
       });
-      
-      // Check indexes
-      const indexes = await client.query(`
-        SELECT indexname, indexdef
-        FROM pg_indexes
-        WHERE tablename = 'pending_registrations';
-      `);
-      
-      console.log('\n🔍 Indexes:');
-      indexes.rows.forEach(idx => {
-        console.log(`   - ${idx.indexname}`);
-      });
-      
     } else {
-      console.error('❌ Error: Table was not created');
+      console.error('❌ Error: Niches table was not created');
       process.exit(1);
     }
     
-    console.log('\n🎉 All done! You can now restart your server.');
-    console.log('   The new email verification flow is ready to use.\n');
+    if (checkNicheColumn.rows[0].exists) {
+      console.log('\n✅ Verified: niche_id column added to blog_posts');
+    } else {
+      console.error('❌ Error: niche_id column was not added to blog_posts');
+      process.exit(1);
+    }
+    
+    console.log('\n🎉 All done! Niches feature is now available.');
+    console.log('   You can now create niches in the admin panel.\n');
     
   } catch (error) {
     console.error('❌ Migration failed:', error.message);

@@ -10,20 +10,26 @@ import './Home.css';
 const Home = () => {
   const modal = useModal();
   const [recentPosts, setRecentPosts] = useState([]);
+  const [niches, setNiches] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchPosts = async () => {
+    const fetchData = async () => {
       try {
-        const { data } = await apiClient.get(endpoints.blog.list + '?limit=6');
-        setRecentPosts(data.posts || data);
+        // Fetch niches with posts
+        const { data: nichesData } = await apiClient.get(endpoints.niches.public + '?limit=3');
+        setNiches(nichesData.niches || []);
+        
+        // Fetch recent posts for the main section
+        const { data: postsData } = await apiClient.get(endpoints.blog.list + '?limit=6');
+        setRecentPosts(postsData.posts || postsData);
       } catch (err) {
-        console.error('Failed to fetch posts:', err);
+        console.error('Failed to fetch data:', err);
       } finally {
         setLoading(false);
       }
     };
-    fetchPosts();
+    fetchData();
   }, []);
 
   return (
@@ -91,6 +97,42 @@ const Home = () => {
         </div>
       </section>
 
+
+      {/* Niches Section */}
+      {niches.length > 0 && (
+        <section className="niches-section" style={{padding: '4rem 0', background: '#fafafa'}}>
+          <div className="container">
+            {niches.map((niche, index) => (
+              <div key={niche.id} style={{marginBottom: index < niches.length - 1 ? '4rem' : '0'}}>
+                <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem'}}>
+                  <div style={{display: 'flex', alignItems: 'center', gap: '1rem'}}>
+                    {niche.logo_url && (
+                      <img src={niche.logo_url} alt={niche.name} style={{width: '40px', height: '40px', objectFit: 'contain'}} />
+                    )}
+                    <h2 style={{fontSize: '2rem', fontWeight: '800', color: '#111', margin: 0}}>
+                      {niche.logo_text || niche.name}
+                    </h2>
+                  </div>
+                  <Link to={`/${niche.slug}`} className="recent-button" style={{fontSize: '0.875rem'}}>
+                    <span>View All</span>
+                    <ArrowRight className="recent-button-arrow" />
+                  </Link>
+                </div>
+                <div style={{height: '2px', background: 'linear-gradient(90deg, #111 0%, transparent 100%)', marginBottom: '2rem'}} />
+                {niche.posts.length > 0 ? (
+                  <div className="recent-cards-container">
+                    {niche.posts.map((post) => (
+                      <PostCard key={post.id} post={post} showMeta={false} />
+                    ))}
+                  </div>
+                ) : (
+                  <p style={{textAlign: 'center', color: '#666', padding: '2rem'}}>No posts in this niche yet.</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Recent Articles */}
       <section className="recent-section">

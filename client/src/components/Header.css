@@ -197,6 +197,74 @@ header {
   }
 }
 
+/* Niches dropdown */
+.header-niches-dropdown {
+  position: relative;
+}
+
+.niches-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  min-width: 200px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 20px 30px -15px rgba(0,0,0,0.25);
+  padding: 8px;
+  z-index: 100;
+}
+
+.niches-dropdown-item {
+  display: block;
+  padding: 0.6rem 0.8rem;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #000000;
+  font-weight: 600;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.niches-dropdown-item:hover {
+  background: #000000;
+  color: #ffffff;
+}
+
+/* Mobile niches */
+.mobile-nav-niches-label {
+  padding: 0.75rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.mobile-nav-niches-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0 1.25rem 1rem 1.25rem;
+}
+
+.mobile-nav-niche-chip {
+  padding: 0.5rem 1rem;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #000000;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.mobile-nav-niche-chip:hover {
+  background: #000000;
+  color: #ffffff;
+  border-color: #000000;
+}
+
 /* Mobile/tablet tweaks to avoid overflow */
 @media (max-width: 900px) {
   /* Ensure profile menu stays within viewport */

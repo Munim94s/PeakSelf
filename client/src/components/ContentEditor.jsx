@@ -17,12 +17,14 @@ export default function ContentEditor({ onSave, onCancel, initialPost }) {
   const [tags, setTags] = useState([]);
   const [selectedTags, setSelectedTags] = useState(initialPost?.tags?.map(t => t.id) || []);
   const [showTags, setShowTags] = useState(false);
+  const [niches, setNiches] = useState([]);
+  const [selectedNiche, setSelectedNiche] = useState(initialPost?.niche_id || '');
   const editorRef = useRef(null);
   const fileInputRef = useRef(null);
   const featuredImageInputRef = useRef(null);
   const savedSelectionRef = useRef(null);
 
-  // Load available tags
+  // Load available tags and niches
   React.useEffect(() => {
     const loadTags = async () => {
       try {
@@ -34,7 +36,19 @@ export default function ContentEditor({ onSave, onCancel, initialPost }) {
         setTags([]);
       }
     };
+    
+    const loadNiches = async () => {
+      try {
+        const { data } = await apiClient.get(endpoints.niches.list);
+        setNiches(Array.isArray(data) ? data : data?.niches || []);
+      } catch (error) {
+        console.error('Failed to load niches:', error);
+        setNiches([]);
+      }
+    };
+    
     loadTags();
+    loadNiches();
   }, []);
 
   // Load initial content if editing
@@ -249,7 +263,8 @@ export default function ContentEditor({ onSave, onCancel, initialPost }) {
       image: featuredImage,
       content: editorContent,
       excerpt: excerpt || editorRef.current.innerText.substring(0, 150),
-      tagIds: selectedTags
+      tagIds: selectedTags,
+      nicheId: selectedNiche || null
     });
   };
 
@@ -322,6 +337,23 @@ export default function ContentEditor({ onSave, onCancel, initialPost }) {
                 style={{ display: 'none' }}
               />
             </div>
+          </div>
+          
+          <div className="niche-section">
+            <label htmlFor="niche-select" className="niche-label">Niche</label>
+            <select 
+              id="niche-select"
+              value={selectedNiche}
+              onChange={(e) => setSelectedNiche(e.target.value)}
+              className="niche-select"
+            >
+              <option value="">No niche</option>
+              {niches.map(niche => (
+                <option key={niche.id} value={niche.id}>
+                  {niche.name}
+                </option>
+              ))}
+            </select>
           </div>
           
           <div className="tags-section">

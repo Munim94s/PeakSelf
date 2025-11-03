@@ -4,12 +4,78 @@ import logger from '../utils/logger.js';
 
 const router = express.Router();
 
-// GET /api/blog - Get all published blog posts
-router.get('/', async (req, res) => {
+// GET /api/blog/niches - Get all active niches with their recent posts
+router.get('/niches', async (req, res) => {
   try {
-    const { limit = 10, offset = 0, tag } = req.query;
+    const { limit = 3 } = req.query; // Limit posts per niche
     
-    let query = `
+    // Get all active niches that should be shown on route
+    const nichesResult = await pool.query(`
+      SELECT id, name, slug, display_name, logo_url, logo_text
+      FROM niches
+      WHERE is_active = true AND show_on_route = true
+      ORDER BY display_order ASC
+    `);
+    
+    const niches = nichesResult.rows;
+    
+    // For each niche, get recent published posts
+    const nichesWithPosts = await Promise.all(
+      niches.map(async (niche) => {
+        const postsResult = await pool.query(`
+          SELECT bp.id, bp.title, bp.excerpt, bp.slug, bp.image,
+            bp.created_at, bp.published_at,
+            u.name as author,
+            COALESCE(
+              json_agg(
+                json_build_object('id', t.id, 'name', t.name, 'slug', t.slug, 'color', t.color)
+              ) FILTER (WHERE t.id IS NOT NULL),
+              '[]'
+            ) as tags
+          FROM blog_posts bp
+          LEFT JOIN users u ON bp.author_id = u.id
+          LEFT JOIN content_tags ct ON bp.id = ct.content_id
+          LEFT JOIN tags t ON ct.tag_id = t.id
+          WHERE bp.status = 'published' AND bp.niche_id = $1
+          GROUP BY bp.id, u.name
+          ORDER BY bp.published_at DESC
+          LIMIT $2
+        `, [niche.id, parseInt(limit)]);
+        
+        return {
+          ...niche,
+          posts: postsResult.rows
+        };
+      })
+    );
+    
+    res.json({ niches: nichesWithPosts });
+  } catch (error) {
+    logger.error('Error fetching niches with posts:', error);
+    res.status(500).json({ error: 'Failed to fetch niches' });
+  }
+});
+
+// GET /api/blog/niches/:slug - Get niche by slug with posts
+router.get('/niches/:slug', async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const { limit = 10, offset = 0 } = req.query;
+    
+    // Get niche details
+    const nicheResult = await pool.query(
+      'SELECT * FROM niches WHERE slug = $1 AND is_active = true',
+      [slug]
+    );
+    
+    if (nicheResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Niche not found' });
+    }
+    
+    const niche = nicheResult.rows[0];
+    
+    // Get posts for this niche
+    const postsResult = await pool.query(`
       SELECT bp.id, bp.title, bp.excerpt, bp.slug, bp.content, bp.image,
         bp.created_at, bp.updated_at, bp.published_at,
         u.name as author,
@@ -23,6 +89,44 @@ router.get('/', async (req, res) => {
       LEFT JOIN users u ON bp.author_id = u.id
       LEFT JOIN content_tags ct ON bp.id = ct.content_id
       LEFT JOIN tags t ON ct.tag_id = t.id
+      WHERE bp.status = 'published' AND bp.niche_id = $1
+      GROUP BY bp.id, u.name
+      ORDER BY bp.published_at DESC
+      LIMIT $2 OFFSET $3
+    `, [niche.id, parseInt(limit), parseInt(offset)]);
+    
+    res.json({ 
+      niche,
+      posts: postsResult.rows 
+    });
+  } catch (error) {
+    logger.error('Error fetching niche posts:', error);
+    res.status(500).json({ error: 'Failed to fetch niche posts' });
+  }
+});
+
+// GET /api/blog - Get all published blog posts
+router.get('/', async (req, res) => {
+  try {
+    const { limit = 10, offset = 0, tag } = req.query;
+    
+    let query = `
+      SELECT bp.id, bp.title, bp.excerpt, bp.slug, bp.content, bp.image,
+        bp.created_at, bp.updated_at, bp.published_at, bp.niche_id,
+        u.name as author,
+        COALESCE(
+          json_agg(
+            json_build_object('id', t.id, 'name', t.name, 'slug', t.slug, 'color', t.color)
+          ) FILTER (WHERE t.id IS NOT NULL),
+          '[]'
+        ) as tags,
+        n.name as niche_name,
+        n.slug as niche_slug
+      FROM blog_posts bp
+      LEFT JOIN users u ON bp.author_id = u.id
+      LEFT JOIN content_tags ct ON bp.id = ct.content_id
+      LEFT JOIN tags t ON ct.tag_id = t.id
+      LEFT JOIN niches n ON bp.niche_id = n.id
       WHERE bp.status = 'published'
     `;
     
@@ -40,7 +144,7 @@ router.get('/', async (req, res) => {
     }
     
     query += `
-      GROUP BY bp.id, u.name
+      GROUP BY bp.id, u.name, n.name, n.slug
       ORDER BY bp.created_at DESC
       LIMIT $${params.length + 1} OFFSET $${params.length + 2}
     `;

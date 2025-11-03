@@ -67,18 +67,6 @@ const PostCard = ({ post, featured = false, showMeta = true }) => {
                 {formattedDate}
               </span>
             </div>
-            <div className="post-card-meta-item">
-              <Clock className="post-card-meta-icon" />
-              <span className="post-card-meta-text">
-                {readingTime} min read
-              </span>
-            </div>
-            <div className="post-card-meta-item">
-              <User className="post-card-meta-icon" />
-              <span className="post-card-meta-text">
-                {post.author}
-              </span>
-            </div>
           </div>
         )}
 

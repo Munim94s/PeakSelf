@@ -1,53 +1,176 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { blogPosts, categories } from '../data/blogPosts';
-import PostList from '../components/PostList';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useParams } from 'react-router-dom';
+import Fuse from 'fuse.js';
+import { apiClient, endpoints } from '../api';
+import PostCard from '../components/PostCard';
 import SearchBar from '../components/SearchBar';
-import CategoryFilter from '../components/CategoryFilter';
 import './Blog.css';
 
 const Blog = () => {
+  const { nicheSlug } = useParams();
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
+  const [niche, setNiche] = useState(null);
+  const observerRef = useRef();
+  const lastPostRef = useRef();
+
+  useEffect(() => {
+    const fetchPosts = async () => {
+      try {
+        setLoading(true);
+        setPosts([]);
+        setHasMore(true);
+        
+        if (nicheSlug) {
+          // Fetch niche-specific posts
+          const { data } = await apiClient.get(endpoints.niches.bySlug(nicheSlug));
+          setNiche(data.niche);
+          setPosts(data.posts || []);
+          setHasMore(false); // Niche pages show all posts at once for now
+        } else {
+          // Fetch all posts with pagination
+          const { data } = await apiClient.get(endpoints.blog.list + '?limit=12');
+          setPosts(data.posts || []);
+          setHasMore(data.posts && data.posts.length === 12);
+        }
+      } catch (err) {
+        console.error('Failed to fetch posts:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPosts();
+  }, [nicheSlug]);
+
+  // Infinite scroll
+  useEffect(() => {
+    if (loading || loadingMore || !hasMore || nicheSlug) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && hasMore) {
+        loadMorePosts();
+      }
+    }, { threshold: 0.1 });
+
+    if (lastPostRef.current) {
+      observer.observe(lastPostRef.current);
+    }
+
+    observerRef.current = observer;
+
+    return () => {
+      if (observer) {
+        observer.disconnect();
+      }
+    };
+  }, [loading, loadingMore, hasMore, filteredPosts, nicheSlug]);
+
+  const loadMorePosts = async () => {
+    if (loadingMore || !hasMore) return;
+    
+    try {
+      setLoadingMore(true);
+      const { data } = await apiClient.get(endpoints.blog.list + `?limit=12&offset=${posts.length}`);
+      const newPosts = data.posts || [];
+      
+      if (newPosts.length === 0 || newPosts.length < 12) {
+        setHasMore(false);
+      }
+      
+      setPosts(prev => [...prev, ...newPosts]);
+    } catch (err) {
+      console.error('Failed to load more posts:', err);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  // Fuse.js configuration
+  const fuse = useMemo(() => {
+    const options = {
+      keys: [
+        { name: 'title', weight: 0.7 },
+        { name: 'excerpt', weight: 0.2 },
+        { name: 'tags.name', weight: 0.1 }
+      ],
+      threshold: 0.4,
+      includeScore: true,
+      minMatchCharLength: 2,
+      ignoreLocation: true
+    };
+    return new Fuse(posts, options);
+  }, [posts]);
 
   const filteredPosts = useMemo(() => {
-    let filtered = blogPosts;
+    if (!searchTerm) return posts;
+    
+    // Use Fuse.js for fuzzy search
+    const results = fuse.search(searchTerm);
+    return results.map(result => result.item);
+  }, [posts, searchTerm, fuse]);
 
-    // Filter by search term
-    if (searchTerm) {
-      filtered = filtered.filter(post =>
-        post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        post.excerpt.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        post.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
-    }
-
-    // Filter by category
-    if (selectedCategory) {
-      filtered = filtered.filter(post => post.category === selectedCategory);
-    }
-
-    return filtered;
-  }, [searchTerm, selectedCategory]);
-
-  // Memoize the separation of featured and regular posts
-  const { featuredPost, regularPosts } = useMemo(() => ({
-    featuredPost: filteredPosts.find(post => post.featured),
-    regularPosts: filteredPosts.filter(post => !post.featured)
-  }), [filteredPosts]);
-
-  // Memoize event handlers to prevent SearchBar re-renders
   const handleSearch = useCallback((term) => {
     setSearchTerm(term);
   }, []);
 
-  const handleCategoryChange = useCallback((category) => {
-    setSelectedCategory(category);
-  }, []);
-
   const handleClearFilters = useCallback(() => {
     setSearchTerm('');
-    setSelectedCategory('');
   }, []);
+
+  const shimmerStyle = {
+    background: 'linear-gradient(90deg, #d0d0d0 0%, #f0f0f0 20%, #d0d0d0 40%, #d0d0d0 100%)',
+    backgroundSize: '1000px 100%',
+    borderRadius: '8px',
+    animation: 'shimmer 1.5s infinite linear'
+  };
+
+  const SkeletonPostCard = () => (
+    <article style={{
+      display: 'flex',
+      flexDirection: 'column',
+      border: '1px solid #e5e7eb',
+      borderRadius: '12px',
+      overflow: 'hidden',
+      backgroundColor: '#fff',
+      height: '100%',
+      minHeight: '380px',
+    }}>
+      <div style={{ ...shimmerStyle, height: '200px', width: '100%', flexShrink: 0 }} />
+      <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', flex: 1 }}>
+        <div style={{ ...shimmerStyle, height: '20px', width: '70px' }} />
+        <div style={{ ...shimmerStyle, height: '28px', width: '90%' }} />
+        <div style={{ ...shimmerStyle, height: '18px', width: '100%' }} />
+        <div style={{ ...shimmerStyle, height: '18px', width: '95%' }} />
+        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+          <div style={{ ...shimmerStyle, height: '24px', width: '50px' }} />
+          <div style={{ ...shimmerStyle, height: '24px', width: '60px' }} />
+        </div>
+      </div>
+    </article>
+  );
+
+  if (loading) {
+    return (
+      <div className="blog-container">
+        <div className="blog-content-wrapper">
+          <div className="blog-header">
+            <div style={{...shimmerStyle, height: '48px', width: '200px'}} />
+            <div style={{...shimmerStyle, height: '24px', width: '60%', marginTop: '1rem'}} />
+          </div>
+          <div className="recent-cards-container" style={{marginTop: '3rem'}}>
+            {[...Array(6)].map((_, i) => (
+              <div key={i} style={{display: 'flex', flexDirection: 'column', minHeight: '380px'}}>
+                <SkeletonPostCard />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="blog-container">
@@ -55,11 +178,13 @@ const Blog = () => {
         {/* Header */}
         <div className="blog-header">
           <h1 className="blog-title">
-            Blog
+            {niche ? `${niche.display_name || niche.name} Blog` : 'Blog'}
           </h1>
           <p className="blog-subtitle">
-            Explore our collection of articles covering technology, personal growth, 
-            productivity, and lifestyle topics to help you reach your peak potential.
+            {niche 
+              ? `Explore articles and insights about ${(niche.display_name || niche.name).toLowerCase()}`
+              : 'Explore our collection of articles covering technology, personal growth, productivity, and lifestyle topics to help you reach your peak potential.'
+            }
           </p>
         </div>
 
@@ -71,12 +196,6 @@ const Blog = () => {
               placeholder="Search articles, tags, or topics..."
             />
           </div>
-          
-          <CategoryFilter
-            categories={categories}
-            selectedCategory={selectedCategory}
-            onCategoryChange={handleCategoryChange}
-          />
         </div>
 
         {/* Results Count */}
@@ -87,26 +206,53 @@ const Blog = () => {
               : `Showing ${filteredPosts.length} article${filteredPosts.length !== 1 ? 's' : ''}`
             }
             {searchTerm && ` for "${searchTerm}"`}
-            {selectedCategory && ` in ${selectedCategory}`}
+            {!searchTerm && hasMore && ` (loading more as you scroll...)`}
           </p>
         </div>
 
         {/* Posts */}
-        <PostList posts={regularPosts} featuredPost={featuredPost} />
-
-        {/* No Results Message */}
-        {filteredPosts.length === 0 && (
+        {filteredPosts.length > 0 ? (
+          <div className="recent-cards-container" style={{marginTop: '2rem'}}>
+            {filteredPosts.map((post, index) => {
+              if (index === filteredPosts.length - 1) {
+                return (
+                  <div key={`post-${post.id}-${index}`} ref={lastPostRef} style={{display: 'flex', flexDirection: 'column', minHeight: '380px'}}>
+                    <PostCard post={post} />
+                  </div>
+                );
+              }
+              return (
+                <div key={`post-${post.id}-${index}`} style={{display: 'flex', flexDirection: 'column', minHeight: '380px'}}>
+                  <PostCard post={post} />
+                </div>
+              );
+            })}
+          </div>
+        ) : (
           <div className="blog-no-results">
             <div className="blog-no-results-title">No articles found</div>
             <p className="blog-no-results-subtitle">
-              Try adjusting your search terms or browse different categories
+              {searchTerm ? 'Try adjusting your search terms' : 'No articles published yet'}
             </p>
-            <button
-              onClick={handleClearFilters}
-              className="blog-clear-filters-btn"
-            >
-              Clear Filters
-            </button>
+            {searchTerm && (
+              <button
+                onClick={handleClearFilters}
+                className="blog-clear-filters-btn"
+              >
+                Clear Filters
+              </button>
+            )}
+          </div>
+        )}
+        
+        {/* Loading more indicator */}
+        {loadingMore && (
+          <div className="recent-cards-container" style={{marginTop: '2rem'}}>
+            {[...Array(6)].map((_, i) => (
+              <div key={i} style={{display: 'flex', flexDirection: 'column', minHeight: '380px'}}>
+                <SkeletonPostCard />
+              </div>
+            ))}
           </div>
         )}
       </div>

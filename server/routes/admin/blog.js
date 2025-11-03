@@ -89,7 +89,7 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   const client = await pool.connect();
   try {
-    const { title, content, excerpt, image, status = 'draft', tagIds = [] } = req.body;
+    const { title, content, excerpt, image, status = 'draft', tagIds = [], nicheId } = req.body;
 
     if (!title || !content) {
       return res.status(400).json({ error: 'Title and content are required' });
@@ -101,10 +101,10 @@ router.post('/', async (req, res) => {
     await client.query('BEGIN');
 
     const result = await client.query(
-      `INSERT INTO blog_posts (title, content, excerpt, slug, status, author_id, image)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO blog_posts (title, content, excerpt, slug, status, author_id, image, niche_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
-      [title, content, excerpt, slug, status, authorId, image || null]
+      [title, content, excerpt, slug, status, authorId, image || null, nicheId || null]
     );
 
     const postId = result.rows[0].id;
@@ -157,7 +157,7 @@ router.put('/:id', async (req, res) => {
   const client = await pool.connect();
   try {
     const { id } = req.params;
-    const { title, content, excerpt, image, status, tagIds = [] } = req.body;
+    const { title, content, excerpt, image, status, tagIds = [], nicheId } = req.body;
 
     if (!title || !content) {
       return res.status(400).json({ error: 'Title and content are required' });
@@ -169,10 +169,10 @@ router.put('/:id', async (req, res) => {
 
     const result = await client.query(
       `UPDATE blog_posts 
-       SET title = $1, content = $2, excerpt = $3, slug = $4, status = $5, image = $6, updated_at = NOW()
-       WHERE id = $7
+       SET title = $1, content = $2, excerpt = $3, slug = $4, status = $5, image = $6, niche_id = $7, updated_at = NOW()
+       WHERE id = $8
        RETURNING *`,
-      [title, content, excerpt, slug, status, image || null, id]
+      [title, content, excerpt, slug, status, image || null, nicheId || null, id]
     );
 
     if (result.rows.length === 0) {

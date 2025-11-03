@@ -52,6 +52,19 @@ export const tags = {
   delete: (id) => `${API}/admin/tags/${id}`,
 };
 
+// Niches endpoints
+export const niches = {
+  list: `${API}/admin/niches`,
+  byId: (id) => `${API}/admin/niches/${id}`,
+  create: `${API}/admin/niches`,
+  update: (id) => `${API}/admin/niches/${id}`,
+  delete: (id) => `${API}/admin/niches/${id}`,
+  reorder: `${API}/admin/niches/reorder`,
+  // Public endpoints
+  public: `${API}/blog/niches`,
+  bySlug: (slug) => `${API}/blog/niches/${slug}`,
+};
+
 // Admin endpoints
 export const admin = {
   // Dashboard
@@ -117,6 +130,7 @@ export default {
   newsletter,
   blog,
   tags,
+  niches,
   admin,
   util,
 };

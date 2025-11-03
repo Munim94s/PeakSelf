@@ -10,6 +10,7 @@ import './App.css';
 const Home = lazy(() => import('./pages/Home'));
 const Blog = lazy(() => import('./pages/Blog'));
 const Post = lazy(() => import('./pages/Post'));
+const NichePage = lazy(() => import('./pages/NichePage'));
 const About = lazy(() => import('./pages/About'));
 const Contact = lazy(() => import('./pages/Contact'));
 const Login = lazy(() => import('./pages/Login'));
@@ -38,6 +39,7 @@ function App() {
               <Route path="/" element={<Home />} />
               <Route path="/blog" element={<Blog />} />
               <Route path="/blog/:slug" element={<Post />} />
+              <Route path="/:nicheSlug/blog" element={<Blog />} />
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/login" element={<Login />} />
@@ -46,6 +48,7 @@ function App() {
               <Route path="/rate-limit" element={<RateLimit />} />
               <Route path="/admin/*" element={<Admin />} />
               <Route path="/not-accessible" element={<NotAccessible />} />
+              <Route path="/:nicheSlug" element={<NichePage />} />
             </Routes>
           </Suspense>
         {!hideFooter && <Footer />}

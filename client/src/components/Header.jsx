@@ -10,6 +10,9 @@ const Header = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [niches, setNiches] = useState([]);
+  const [nichesMenuOpen, setNichesMenuOpen] = useState(false);
+  const [currentNiche, setCurrentNiche] = useState(null);
 
   // Fetch user function (reusable)
   const fetchMe = async () => {
@@ -26,7 +29,32 @@ const Header = () => {
   // Fetch on mount
   useEffect(() => {
     fetchMe();
+    
+    // Fetch niches
+    const fetchNiches = async () => {
+      try {
+        const { data } = await apiClient.get(endpoints.niches.public);
+        setNiches(data.niches || []);
+      } catch (err) {
+        console.error('Failed to fetch niches:', err);
+      }
+    };
+    fetchNiches();
   }, []);
+
+  // Detect current niche from URL
+  useEffect(() => {
+    const path = location.pathname;
+    // Check if we're on a niche page (/:nicheSlug or /:nicheSlug/blog)
+    const nicheMatch = path.match(/^\/([^/]+)(\/blog)?$/);
+    if (nicheMatch && nicheMatch[1] !== 'blog' && nicheMatch[1] !== 'about' && nicheMatch[1] !== 'contact' && nicheMatch[1] !== 'login' && nicheMatch[1] !== 'register' && nicheMatch[1] !== 'admin' && nicheMatch[1] !== 'check-email' && nicheMatch[1] !== 'rate-limit' && nicheMatch[1] !== 'not-accessible') {
+      const nicheSlug = nicheMatch[1];
+      const niche = niches.find(n => n.slug === nicheSlug);
+      setCurrentNiche(niche || null);
+    } else {
+      setCurrentNiche(null);
+    }
+  }, [location.pathname, niches]);
 
   // Refetch when location changes to home (catches OAuth redirects)
   // Only refetch if we're on home page (where OAuth redirects to)
@@ -124,19 +152,49 @@ const Header = () => {
       <div className="header-container">
         <div className="header-content">
           {/* Logo */}
-          <Link to="/" className="header-logo">
-            <img src="/logo-p.svg" alt="PeakSelf Logo" className="header-logo-icon" />
-            <span className="header-brand-name">PEAKSELF</span>
+          <Link to={currentNiche ? `/${currentNiche.slug}` : '/'} className="header-logo">
+            {currentNiche?.logo_url ? (
+              <img src={currentNiche.logo_url} alt={currentNiche.name} className="header-logo-icon" />
+            ) : (
+              <img src="/logo-p.svg" alt="PeakSelf Logo" className="header-logo-icon" />
+            )}
+            <span className="header-brand-name">
+              {currentNiche ? (currentNiche.logo_text || currentNiche.name.toUpperCase()) : 'PEAKSELF'}
+            </span>
           </Link>
 
           {/* Desktop Navigation */}
           <nav className="header-nav">
-            <Link to="/" className="header-nav-link">
+            <Link to={currentNiche ? `/${currentNiche.slug}` : '/'} className="header-nav-link">
               Home
             </Link>
-            <Link to="/blog" className="header-nav-link">
+            <Link to={currentNiche ? `/${currentNiche.slug}/blog` : '/blog'} className="header-nav-link">
               Blog
             </Link>
+            {niches.length > 0 && (
+              <div 
+                className="header-niches-dropdown"
+                onMouseEnter={() => setNichesMenuOpen(true)}
+                onMouseLeave={() => setNichesMenuOpen(false)}
+              >
+                <button className="header-nav-link" style={{background: 'transparent', border: 'none', cursor: 'pointer'}}>
+                  Niches ▾
+                </button>
+                {nichesMenuOpen && (
+                  <div className="niches-dropdown-menu">
+                    {niches.map(niche => (
+                      <Link 
+                        key={niche.id} 
+                        to={`/${niche.slug}`} 
+                        className="niches-dropdown-item"
+                      >
+                        {niche.name}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             <Link to="/about" className="header-nav-link">
               About
             </Link>
@@ -217,8 +275,14 @@ const Header = () => {
             {/* Mobile Menu Header */}
             <div className="mobile-nav-header">
               <div className="mobile-nav-header-logo">
-                <img src="/logo-p.svg" alt="PeakSelf Logo" />
-                <span className="mobile-nav-header-title">PEAKSELF</span>
+                {currentNiche?.logo_url ? (
+                  <img src={currentNiche.logo_url} alt={currentNiche.name} />
+                ) : (
+                  <img src="/logo-p.svg" alt="PeakSelf Logo" />
+                )}
+                <span className="mobile-nav-header-title">
+                  {currentNiche ? (currentNiche.logo_text || currentNiche.name.toUpperCase()) : 'PEAKSELF'}
+                </span>
               </div>
               <button 
                 className="mobile-nav-close-btn"
@@ -245,17 +309,33 @@ const Header = () => {
 
               {/* Navigation Links */}
               <Link 
-                to="/" 
-                className={`header-mobile-nav-link ${location.pathname === '/' ? 'active' : ''}`}
+                to={currentNiche ? `/${currentNiche.slug}` : '/'} 
+                className={`header-mobile-nav-link ${location.pathname === (currentNiche ? `/${currentNiche.slug}` : '/') ? 'active' : ''}`}
               >
                 Home
               </Link>
               <Link 
-                to="/blog" 
-                className={`header-mobile-nav-link ${location.pathname === '/blog' ? 'active' : ''}`}
+                to={currentNiche ? `/${currentNiche.slug}/blog` : '/blog'} 
+                className={`header-mobile-nav-link ${location.pathname === (currentNiche ? `/${currentNiche.slug}/blog` : '/blog') ? 'active' : ''}`}
               >
                 Blog
               </Link>
+              {niches.length > 0 && (
+                <>
+                  <div className="mobile-nav-niches-label">Niches</div>
+                  <div className="mobile-nav-niches-grid">
+                    {niches.map(niche => (
+                      <Link 
+                        key={niche.id}
+                        to={`/${niche.slug}`} 
+                        className="mobile-nav-niche-chip"
+                      >
+                        {niche.name}
+                      </Link>
+                    ))}
+                  </div>
+                </>
+              )}
               <Link 
                 to="/about" 
                 className={`header-mobile-nav-link ${location.pathname === '/about' ? 'active' : ''}`}

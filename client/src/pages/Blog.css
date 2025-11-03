@@ -17,14 +17,14 @@
 }
 
 .blog-title {
-  font-size: 2.25rem;
+  font-size: 1.75rem;
   font-weight: 700;
   color: #000000;
   margin-bottom: 1rem;
 }
 
 .blog-subtitle {
-  font-size: 1.25rem;
+  font-size: 1rem;
   color: #666666;
   max-width: 48rem;
   margin: 0 auto;
@@ -81,7 +81,27 @@
   }
 }
 
+@media (min-width: 640px) {
+  .blog-title {
+    font-size: 2rem;
+  }
+  
+  .blog-subtitle {
+    font-size: 1.125rem;
+  }
+}
+
 @media (min-width: 768px) {
+  .blog-title {
+    font-size: 2.5rem;
+  }
+  
+  .blog-subtitle {
+    font-size: 1.25rem;
+  }
+}
+
+@media (min-width: 1024px) {
   .blog-title {
     font-size: 3rem;
   }
