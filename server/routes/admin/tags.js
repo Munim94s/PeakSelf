@@ -16,9 +16,9 @@ function generateSlug(name) {
 router.get('/', async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT t.*, COUNT(bpt.blog_post_id) as post_count
+      SELECT t.*, COUNT(ct.content_id) as post_count
       FROM tags t
-      LEFT JOIN blog_post_tags bpt ON t.id = bpt.tag_id
+      LEFT JOIN content_tags ct ON t.id = ct.tag_id
       GROUP BY t.id
       ORDER BY t.name ASC
     `);
@@ -120,7 +120,7 @@ router.delete('/:id', async (req, res) => {
 
     // Check if tag is being used
     const usageResult = await pool.query(
-      'SELECT COUNT(*) as count FROM blog_post_tags WHERE tag_id = $1',
+      'SELECT COUNT(*) as count FROM content_tags WHERE tag_id = $1',
       [id]
     );
 

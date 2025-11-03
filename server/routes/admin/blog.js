@@ -43,8 +43,8 @@ router.get('/', async (req, res) => {
           '[]'
         ) as tags
       FROM blog_posts bp
-      LEFT JOIN blog_post_tags bpt ON bp.id = bpt.blog_post_id
-      LEFT JOIN tags t ON bpt.tag_id = t.id
+      LEFT JOIN content_tags ct ON bp.id = ct.content_id
+      LEFT JOIN tags t ON ct.tag_id = t.id
       GROUP BY bp.id
       ORDER BY bp.created_at DESC
     `);
@@ -68,8 +68,8 @@ router.get('/:id', async (req, res) => {
           '[]'
         ) as tags
       FROM blog_posts bp
-      LEFT JOIN blog_post_tags bpt ON bp.id = bpt.blog_post_id
-      LEFT JOIN tags t ON bpt.tag_id = t.id
+      LEFT JOIN content_tags ct ON bp.id = ct.content_id
+      LEFT JOIN tags t ON ct.tag_id = t.id
       WHERE bp.id = $1
       GROUP BY bp.id
     `, [id]);
@@ -116,7 +116,7 @@ router.post('/', async (req, res) => {
       ).join(', ');
       
       await client.query(
-        `INSERT INTO blog_post_tags (blog_post_id, tag_id) VALUES ${tagValues}`,
+        `INSERT INTO content_tags (content_id, tag_id) VALUES ${tagValues}`,
         [postId, ...tagIds]
       );
     }
@@ -131,8 +131,8 @@ router.post('/', async (req, res) => {
           '[]'
         ) as tags
       FROM blog_posts bp
-      LEFT JOIN blog_post_tags bpt ON bp.id = bpt.blog_post_id
-      LEFT JOIN tags t ON bpt.tag_id = t.id
+      LEFT JOIN content_tags ct ON bp.id = ct.content_id
+      LEFT JOIN tags t ON ct.tag_id = t.id
       WHERE bp.id = $1
       GROUP BY bp.id
     `, [postId]);
@@ -182,7 +182,7 @@ router.put('/:id', async (req, res) => {
 
     // Delete existing tag associations
     await client.query(
-      'DELETE FROM blog_post_tags WHERE blog_post_id = $1',
+      'DELETE FROM content_tags WHERE content_id = $1',
       [id]
     );
 
@@ -193,7 +193,7 @@ router.put('/:id', async (req, res) => {
       ).join(', ');
       
       await client.query(
-        `INSERT INTO blog_post_tags (blog_post_id, tag_id) VALUES ${tagValues}`,
+        `INSERT INTO content_tags (content_id, tag_id) VALUES ${tagValues}`,
         [id, ...tagIds]
       );
     }
@@ -208,8 +208,8 @@ router.put('/:id', async (req, res) => {
           '[]'
         ) as tags
       FROM blog_posts bp
-      LEFT JOIN blog_post_tags bpt ON bp.id = bpt.blog_post_id
-      LEFT JOIN tags t ON bpt.tag_id = t.id
+      LEFT JOIN content_tags ct ON bp.id = ct.content_id
+      LEFT JOIN tags t ON ct.tag_id = t.id
       WHERE bp.id = $1
       GROUP BY bp.id
     `, [id]);
