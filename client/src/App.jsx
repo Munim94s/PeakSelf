@@ -5,6 +5,7 @@ import Footer from './components/Footer';
 import Tracker from './components/Tracker';
 import BrandedLoadingScreen from './components/BrandedLoadingScreen';
 import { ModalProvider } from './contexts/ModalContext';
+import SitePrefsBanner from './components/SitePrefsBanner';
 import './App.css';
 // Lazy load all pages
 const Home = lazy(() => import('./pages/Home'));
@@ -52,6 +53,7 @@ function App() {
             </Routes>
           </Suspense>
         {!hideFooter && <Footer />}
+        {!hideFooter && <SitePrefsBanner />}
       </div>
     </ModalProvider>
   );

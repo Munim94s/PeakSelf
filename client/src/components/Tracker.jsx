@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { apiFetch } from '../utils/api';
 import { API_BASE } from '../config';
+import { hasConsent } from '../utils/consent';
 
 export default function Tracker() {
   const location = useLocation();
@@ -10,6 +11,9 @@ export default function Tracker() {
 
   useEffect(() => {
     try {
+      // If user has not consented to optional cookies, skip tracking
+      if (!hasConsent()) return;
+
       // Deduplicate to avoid React Strict Mode double-invoking effects in dev
       const prevPath = lastPathRef.current;
       if (prevPath === location.pathname) return;
