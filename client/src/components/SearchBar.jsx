@@ -1,5 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { Search, X } from 'lucide-react';
+import { trackSearch } from '../utils/analytics';
+import { hasConsent } from '../utils/consent';
 import './SearchBar.css';
 
 const SearchBar = ({ onSearch, placeholder = "Search articles..." }) => {
@@ -8,7 +10,13 @@ const SearchBar = ({ onSearch, placeholder = "Search articles..." }) => {
   // Memoize event handlers to prevent unnecessary re-renders
   const handleSubmit = useCallback((e) => {
     e.preventDefault();
-    onSearch(searchTerm);
+    const results = onSearch(searchTerm);
+    
+    // Track search event
+    if (searchTerm && hasConsent()) {
+      const resultsCount = Array.isArray(results) ? results.length : 0;
+      trackSearch(searchTerm, resultsCount);
+    }
   }, [searchTerm, onSearch]);
 
   const handleClear = useCallback(() => {

@@ -66,7 +66,7 @@ const Blog = () => {
         observer.disconnect();
       }
     };
-  }, [loading, loadingMore, hasMore, filteredPosts, nicheSlug]);
+  }, [loading, loadingMore, hasMore, posts, nicheSlug]);
 
   const loadMorePosts = async () => {
     if (loadingMore || !hasMore) return;

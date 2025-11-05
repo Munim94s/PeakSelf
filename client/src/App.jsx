@@ -3,6 +3,7 @@ import { Routes, Route, useLocation } from 'react-router-dom';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import Tracker from './components/Tracker';
+import EngagementTracker from './components/EngagementTracker';
 import BrandedLoadingScreen from './components/BrandedLoadingScreen';
 import { ModalProvider } from './contexts/ModalContext';
 import SitePrefsBanner from './components/SitePrefsBanner';
@@ -35,6 +36,7 @@ function App() {
       <div className="app">
         <Header />
         <Tracker />
+        <EngagementTracker />
           <Suspense fallback={<BrandedLoadingScreen />}>
             <Routes>
               <Route path="/" element={<Home />} />

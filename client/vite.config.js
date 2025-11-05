@@ -1,8 +1,13 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import { visualizer } from "rollup-plugin-visualizer";
 
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  // Load env file based on mode (from client directory)
+  const env = loadEnv(mode, '.', '');
+  console.log('🔧 Vite loading GA ID:', env.VITE_GA_MEASUREMENT_ID);
+  
+  return {
   plugins: [
     react(),
     visualizer({
@@ -11,6 +16,16 @@ export default defineConfig({
       gzipSize: true,
       brotliSize: true,
     }),
+    // Custom plugin to inject GA measurement ID into HTML
+    {
+      name: 'html-inject-ga',
+      transformIndexHtml(html) {
+        return html.replace(
+          /%VITE_GA_MEASUREMENT_ID%/g,
+          env.VITE_GA_MEASUREMENT_ID || ''
+        );
+      }
+    }
   ],
   server: {
     port: 5173,
@@ -40,4 +55,5 @@ export default defineConfig({
     // Set chunk size warning limit
     chunkSizeWarningLimit: 600,
   },
+  };
 });

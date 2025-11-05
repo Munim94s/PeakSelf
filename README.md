@@ -15,12 +15,16 @@ PeakSelf is a full-stack web application that combines personal analytics tracki
 - Soft delete with restore capability
 
 ### 📊 Analytics & Tracking
+- **Dual Analytics System**: Internal + Google Analytics 4
 - Real-time traffic tracking
 - Session monitoring
 - Visitor analytics with source attribution
 - Dashboard with metrics and charts
 - Performance monitoring (pg_stat_statements)
 - Query optimization insights
+- **GA4 Engagement Metrics**: Scroll depth, time on page, blog engagement
+- **Enhanced Tracking**: Search queries, clicks, social shares
+- **Consent Mode v2**: GDPR/CCPA compliant privacy
 
 ### 📝 Blog Management
 - Rich content editor
@@ -169,7 +173,11 @@ PeakSelf/
    
    Create `client/.env.development`:
    ```env
-   VITE_API_URL=http://localhost:5000
+   VITE_API_BASE=http://localhost:5000
+   
+   # Google Analytics 4 (optional)
+   # Add your GA4 Measurement ID or leave empty to disable
+   VITE_GA_MEASUREMENT_ID=
    ```
 
 4. **Set up the database**

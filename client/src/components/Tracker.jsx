@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { apiFetch } from '../utils/api';
 import { API_BASE } from '../config';
 import { hasConsent } from '../utils/consent';
+import { trackPageView } from '../utils/analytics';
 
 export default function Tracker() {
   const location = useLocation();
@@ -46,11 +47,15 @@ export default function Tracker() {
         trackingData.source = sourceHint;
       }
 
+      // Send to internal analytics API
       apiFetch(`${API_BASE}/api/track`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(trackingData)
       }).catch(() => {});
+      
+      // Also send to Google Analytics (if enabled and user has consented)
+      trackPageView(location.pathname, document.title);
     } catch (_) {}
   }, [location.pathname]);
 

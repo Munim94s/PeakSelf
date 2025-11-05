@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Calendar, Clock, User, ArrowLeft, Share2, Heart } from 'lucide-react';
 import { apiClient, endpoints } from '../api';
+import { trackBlogView, trackBlogReadProgress, trackBlogReadComplete, trackSocialShare } from '../utils/analytics';
+import { hasConsent } from '../utils/consent';
 import './Post.css';
 
 const Post = () => {
@@ -9,6 +11,9 @@ const Post = () => {
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const startTimeRef = useRef(null);
+  const hasTrackedView = useRef(false);
+  const trackedReadProgress = useRef(new Set());
 
   useEffect(() => {
     const fetchPost = async () => {
@@ -24,6 +29,69 @@ const Post = () => {
     };
     fetchPost();
   }, [slug]);
+
+  // Track blog view when post loads
+  useEffect(() => {
+    if (post && !hasTrackedView.current && hasConsent()) {
+      const category = post.tags && post.tags.length > 0 ? post.tags[0].name : 'uncategorized';
+      trackBlogView(post.title, slug, category);
+      hasTrackedView.current = true;
+      startTimeRef.current = Date.now();
+    }
+  }, [post, slug]);
+
+  // Track read progress and completion
+  useEffect(() => {
+    if (!post || !hasConsent()) return;
+
+    const handleScroll = () => {
+      const article = document.querySelector('article');
+      if (!article) return;
+
+      const scrollTop = window.pageYOffset;
+      const articleTop = article.offsetTop;
+      const articleHeight = article.offsetHeight;
+      const windowHeight = window.innerHeight;
+
+      const scrolledIntoArticle = Math.max(0, scrollTop - articleTop);
+      const visibleHeight = Math.min(articleHeight, windowHeight);
+      const percentRead = Math.round((scrolledIntoArticle / (articleHeight - visibleHeight)) * 100);
+
+      // Track at 25%, 50%, 75%, 90%
+      const milestones = [25, 50, 75, 90];
+      for (const milestone of milestones) {
+        if (percentRead >= milestone && !trackedReadProgress.current.has(milestone)) {
+          trackedReadProgress.current.add(milestone);
+          trackBlogReadProgress(slug, milestone);
+        }
+      }
+
+      // Track completion when user reaches 90% and has spent enough time
+      if (percentRead >= 90 && startTimeRef.current) {
+        const timeSpent = Math.floor((Date.now() - startTimeRef.current) / 1000);
+        if (timeSpent > 10 && !trackedReadProgress.current.has('complete')) {
+          trackedReadProgress.current.add('complete');
+          trackBlogReadComplete(slug, timeSpent);
+        }
+      }
+    };
+
+    let timeoutId;
+    const throttledScroll = () => {
+      if (timeoutId) return;
+      timeoutId = setTimeout(() => {
+        handleScroll();
+        timeoutId = null;
+      }, 500);
+    };
+
+    window.addEventListener('scroll', throttledScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener('scroll', throttledScroll);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [post, slug]);
 
   if (loading) {
     return (
@@ -138,11 +206,29 @@ const Post = () => {
           )}
           
           <div className="flex items-center space-x-6">
-            <button className="flex items-center space-x-2 text-gray-600 hover:text-red-500 transition-colors duration-200">
+            <button 
+              className="flex items-center space-x-2 text-gray-600 hover:text-red-500 transition-colors duration-200"
+              data-track-click="blog_like"
+            >
               <Heart className="w-5 h-5" />
               <span className="text-sm font-medium">Like</span>
             </button>
-            <button className="flex items-center space-x-2 text-gray-600 hover:text-blue-500 transition-colors duration-200">
+            <button 
+              className="flex items-center space-x-2 text-gray-600 hover:text-blue-500 transition-colors duration-200"
+              onClick={() => {
+                // Track social share
+                if (navigator.share) {
+                  navigator.share({
+                    title: post.title,
+                    url: window.location.href
+                  }).then(() => {
+                    trackSocialShare('native_share', 'blog_post', slug);
+                  }).catch(() => {});
+                } else {
+                  trackSocialShare('share_button', 'blog_post', slug);
+                }
+              }}
+            >
               <Share2 className="w-5 h-5" />
               <span className="text-sm font-medium">Share</span>
             </button>
