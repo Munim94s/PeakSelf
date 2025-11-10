@@ -27,10 +27,12 @@ router.get('/', async (req, res) => {
 // Dashboard: latest snapshot (with live fallback if table empty)
 router.get('/overview', async (req, res) => {
   try {
-    // Check cache first
-    const cached = cache.get(CACHE_KEYS.DASHBOARD_METRICS);
-    if (cached) {
-      return res.json({ ...cached, cached: true });
+    // Check cache first (skip if nocache param is present)
+    if (!req.query.nocache) {
+      const cached = cache.get(CACHE_KEYS.DASHBOARD_METRICS);
+      if (cached) {
+        return res.json({ ...cached, cached: true });
+      }
     }
 
     // Try the materialized snapshot first
@@ -57,7 +59,7 @@ router.get('/overview', async (req, res) => {
         u AS (
           SELECT
             (SELECT COUNT(*) FROM users WHERE deleted_at IS NULL)::BIGINT AS total_users,
-            (SELECT COUNT(*) FROM users WHERE verified AND deleted_at IS NULL)::BIGINT AS verified_users,
+            (SELECT COUNT(*) FROM users WHERE (verified = TRUE OR provider != 'local') AND deleted_at IS NULL)::BIGINT AS verified_users,
             (SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '24 hours' AND deleted_at IS NULL)::BIGINT AS signups_24h
         ),
         n AS (
@@ -99,6 +101,51 @@ router.get('/overview', async (req, res) => {
   } catch (e) {
     console.error('Dashboard fetch error:', e);
     return res.status(500).json({ error: 'Failed to fetch dashboard' });
+  }
+});
+
+// Clear cache endpoint (for debugging/testing)
+router.post('/clear-cache', async (req, res) => {
+  try {
+    cache.invalidate.dashboard();
+    return res.json({ success: true, message: 'Dashboard cache cleared' });
+  } catch (e) {
+    return res.status(500).json({ error: 'Failed to clear cache' });
+  }
+});
+
+// Sessions time-series data (last 7 days)
+router.get('/sessions-timeline', async (req, res) => {
+  try {
+    const days = parseInt(req.query.days) || 7;
+    const maxDays = Math.min(days, 30); // Cap at 30 days
+
+    const result = await pool.query(
+      `WITH date_series AS (
+        SELECT generate_series(
+          DATE_TRUNC('day', NOW() - INTERVAL '${maxDays} days'),
+          DATE_TRUNC('day', NOW()),
+          '1 day'::interval
+        )::date AS date
+      )
+      SELECT 
+        ds.date,
+        COALESCE(SUM(CASE WHEN s.source = 'instagram' THEN 1 ELSE 0 END), 0)::INTEGER AS instagram,
+        COALESCE(SUM(CASE WHEN s.source = 'facebook' THEN 1 ELSE 0 END), 0)::INTEGER AS facebook,
+        COALESCE(SUM(CASE WHEN s.source = 'youtube' THEN 1 ELSE 0 END), 0)::INTEGER AS youtube,
+        COALESCE(SUM(CASE WHEN s.source = 'google' THEN 1 ELSE 0 END), 0)::INTEGER AS google,
+        COALESCE(SUM(CASE WHEN s.source = 'other' THEN 1 ELSE 0 END), 0)::INTEGER AS others,
+        COALESCE(COUNT(s.id), 0)::INTEGER AS total
+      FROM date_series ds
+      LEFT JOIN user_sessions s ON DATE_TRUNC('day', s.started_at) = ds.date
+      GROUP BY ds.date
+      ORDER BY ds.date ASC`
+    );
+
+    return res.json({ timeline: result.rows });
+  } catch (e) {
+    console.error('Sessions timeline error:', e);
+    return res.status(500).json({ error: 'Failed to fetch sessions timeline' });
   }
 });
 

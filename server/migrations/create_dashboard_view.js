@@ -31,7 +31,7 @@ async function createDashboardView() {
         u AS (
           SELECT
             (SELECT COUNT(*) FROM users)::BIGINT AS total_users,
-            (SELECT COUNT(*) FROM users WHERE verified)::BIGINT AS verified_users,
+            (SELECT COUNT(*) FROM users WHERE (verified = TRUE OR provider != 'local'))::BIGINT AS verified_users,
             (SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '24 hours')::BIGINT AS signups_24h
         ),
         n AS (

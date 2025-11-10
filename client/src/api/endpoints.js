@@ -70,6 +70,7 @@ export const admin = {
   // Dashboard
   dashboard: `${API}/admin`,
   overview: `${API}/admin/overview`,
+  sessionsTimeline: `${API}/admin/sessions-timeline`,
   
   // Users
   users: `${API}/admin/users`,

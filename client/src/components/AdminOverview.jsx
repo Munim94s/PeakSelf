@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Users, UserCheck, Mail, Instagram, Facebook, Youtube, Globe, ExternalLink, TrendingUp } from 'lucide-react';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line } from 'recharts';
 import { apiClient, endpoints, response } from '../api';
 import SkeletonGrid from './SkeletonGrid';
 import './AdminContent.css';
@@ -9,12 +10,15 @@ export default function AdminOverview() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [data, setData] = useState(null);
+  const [timeline, setTimeline] = useState([]);
+  const [timelineLoading, setTimelineLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
       try {
-        const { data } = await apiClient.get(endpoints.admin.overview);
+        // Add timestamp to bust any stale cache
+        const { data } = await apiClient.get(`${endpoints.admin.overview}?t=${Date.now()}`);
         if (!cancelled) setData(data);
       } catch (e) {
         if (!cancelled) setError(response.getErrorMessage(e));
@@ -23,6 +27,22 @@ export default function AdminOverview() {
       }
     }
     load();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadTimeline() {
+      try {
+        const { data } = await apiClient.get(endpoints.admin.sessionsTimeline);
+        if (!cancelled) setTimeline(data.timeline || []);
+      } catch (e) {
+        console.error('Failed to load timeline:', e);
+      } finally {
+        if (!cancelled) setTimelineLoading(false);
+      }
+    }
+    loadTimeline();
     return () => { cancelled = true; };
   }, []);
 
@@ -61,6 +81,69 @@ export default function AdminOverview() {
         <StatCard icon={Youtube} title="Sessions • YouTube" value={fmt(d.sessions_youtube)} subtitle={"last 7 days"} color="#FF0000" />
         <StatCard icon={GoogleIcon} title="Sessions • Google" value={fmt(d.sessions_google)} subtitle={"last 7 days"} color="#4285F4" />
         <StatCard icon={Globe} title="Sessions • Others" value={fmt(d.sessions_others)} subtitle={"last 7 days"} color="#6366F1" />
+      </div>
+
+      {/* Sessions Timeline Chart */}
+      <div style={{ marginTop: '1.5rem' }}>
+        <SessionsTimelineChart data={timeline} loading={timelineLoading} />
+      </div>
+
+      {/* Charts Section */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '1.5rem', marginTop: '1.5rem' }}>
+        {/* Session Sources Pie Chart */}
+        <ChartCard title="Session Sources" subtitle="Last 7 Days">
+          <SessionsPieChart data={{
+            instagram: d.sessions_instagram || 0,
+            facebook: d.sessions_facebook || 0,
+            youtube: d.sessions_youtube || 0,
+            google: d.sessions_google || 0,
+            others: d.sessions_others || 0
+          }} />
+        </ChartCard>
+
+        {/* Total Sessions Bar */}
+        <ChartCard title="Total Sessions" subtitle="Last 7 Days by Platform">
+          <SessionsBarChart data={{
+            instagram: d.sessions_instagram || 0,
+            facebook: d.sessions_facebook || 0,
+            youtube: d.sessions_youtube || 0,
+            google: d.sessions_google || 0,
+            others: d.sessions_others || 0
+          }} />
+        </ChartCard>
+
+        {/* User Stats Bar Chart */}
+        <ChartCard title="User Overview" subtitle="Current Statistics">
+          <UsersBarChart data={{
+            total: d.total_users || 0,
+            verified: d.verified_users || 0,
+            signups24h: d.signups_24h || 0
+          }} />
+        </ChartCard>
+
+        {/* User Verification Rate */}
+        <ChartCard title="Verification Rate" subtitle="User Email Verification">
+          <VerificationPieChart data={{
+            verified: Number(d.verified_users) || 0,
+            unverified: (Number(d.total_users) || 0) - (Number(d.verified_users) || 0)
+          }} />
+        </ChartCard>
+
+        {/* Newsletter Stats */}
+        <ChartCard title="Newsletter Growth" subtitle="Subscriptions">
+          <NewsletterBarChart data={{
+            total: d.newsletter_total || 0,
+            recent: d.newsletter_signups_24h || 0
+          }} />
+        </ChartCard>
+
+        {/* User Activity Comparison */}
+        <ChartCard title="User Activity" subtitle="24-Hour Snapshot">
+          <ActivityBarChart data={{
+            newUsers: d.signups_24h || 0,
+            newNewsletters: d.newsletter_signups_24h || 0
+          }} />
+        </ChartCard>
       </div>
 
       {Array.isArray(d.sessions_others_refs) && d.sessions_others_refs.length > 0 && (
@@ -211,12 +294,441 @@ function GoogleIcon({ size = 20, style }) {
   );
 }
 
-function getColorByIndex(idx) {
-  const colors = ['#6366F1', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981'];
-  return colors[idx % colors.length];
-}
-
 function fmt(n) {
   if (n == null) return '-';
   try { return Number(n).toLocaleString(); } catch { return String(n); }
+}
+
+// Chart Components
+function ChartCard({ title, subtitle, children }) {
+  return (
+    <div style={{
+      border: '1px solid #d0d0d0',
+      borderRadius: 12,
+      padding: '1.5rem',
+      background: '#fff',
+      boxShadow: '0 1px 3px rgba(0,0,0,0.08)'
+    }}>
+      <div style={{ marginBottom: '1rem' }}>
+        <h3 style={{ fontSize: 16, fontWeight: 800, color: '#000', margin: 0 }}>{title}</h3>
+        {subtitle && <div style={{ fontSize: 11, color: '#666', marginTop: 4, textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.5px' }}>{subtitle}</div>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function SessionsPieChart({ data }) {
+  // Convert to numbers and ensure they're valid
+  const chartData = [
+    { name: 'Instagram', value: Number(data.instagram) || 0, color: '#E4405F' },
+    { name: 'Facebook', value: Number(data.facebook) || 0, color: '#1877F2' },
+    { name: 'YouTube', value: Number(data.youtube) || 0, color: '#FF0000' },
+    { name: 'Google', value: Number(data.google) || 0, color: '#4285F4' },
+    { name: 'Others', value: Number(data.others) || 0, color: '#6366F1' }
+  ];
+
+  const totalSessions = chartData.reduce((sum, item) => sum + item.value, 0);
+
+  if (totalSessions === 0) {
+    return (
+      <div style={{ 
+        textAlign: 'center', 
+        color: '#999', 
+        padding: '3rem 1rem',
+        background: '#f9f9f9',
+        borderRadius: 8,
+        border: '1px dashed #ddd'
+      }}>
+        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>No session data</div>
+        <div style={{ fontSize: 12 }}>Sessions will appear here once users visit your site</div>
+      </div>
+    );
+  }
+
+  // Filter out zero values for cleaner display
+  const displayData = chartData.filter(item => item.value > 0);
+
+  const renderLabel = ({ name, percent }) => {
+    return `${name} ${(percent * 100).toFixed(0)}%`;
+  };
+
+  return (
+    <ResponsiveContainer width="100%" height={300}>
+      <PieChart>
+        <Pie
+          data={displayData}
+          cx="50%"
+          cy="50%"
+          labelLine={false}
+          label={renderLabel}
+          outerRadius={80}
+          fill="#8884d8"
+          dataKey="value"
+          stroke="none"
+          style={{ fontSize: '13px', fontWeight: 600, fontFamily: 'system-ui, -apple-system, sans-serif' }}
+        >
+          {displayData.map((entry, index) => (
+            <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+          ))}
+        </Pie>
+        <Tooltip 
+          formatter={(value) => value.toLocaleString()} 
+          contentStyle={{ fontSize: '13px', fontWeight: 600, borderRadius: 8 }}
+        />
+        <Legend 
+          wrapperStyle={{ fontSize: '13px', fontWeight: 600 }}
+          iconType="circle"
+        />
+      </PieChart>
+    </ResponsiveContainer>
+  );
+}
+
+function UsersBarChart({ data }) {
+  const chartData = [
+    { name: 'Total Users', value: data.total, fill: '#6366F1' },
+    { name: 'Verified', value: data.verified, fill: '#10B981' },
+    { name: 'Last 24h', value: data.signups24h, fill: '#F59E0B' }
+  ];
+
+  return (
+    <ResponsiveContainer width="100%" height={300}>
+      <BarChart data={chartData}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" />
+        <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+        <YAxis tick={{ fontSize: 12 }} />
+        <Tooltip formatter={(value) => value.toLocaleString()} />
+        <Bar dataKey="value" radius={[8, 8, 0, 0]}>
+          {chartData.map((entry, index) => (
+            <Cell key={`cell-${index}`} fill={entry.fill} />
+          ))}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+function NewsletterBarChart({ data }) {
+  const chartData = [
+    { name: 'Total Subscribers', value: data.total, fill: '#8B5CF6' },
+    { name: 'Last 24h', value: data.recent, fill: '#EC4899' }
+  ];
+
+  return (
+    <ResponsiveContainer width="100%" height={300}>
+      <BarChart data={chartData}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" />
+        <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+        <YAxis tick={{ fontSize: 12 }} />
+        <Tooltip formatter={(value) => value.toLocaleString()} />
+        <Bar dataKey="value" radius={[8, 8, 0, 0]}>
+          {chartData.map((entry, index) => (
+            <Cell key={`cell-${index}`} fill={entry.fill} />
+          ))}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+function VerificationPieChart({ data }) {
+  const total = data.verified + data.unverified;
+  
+  // Debug logging
+  console.log('VerificationPieChart data:', { verified: data.verified, unverified: data.unverified, total });
+  
+  if (total === 0) {
+    return (
+      <div style={{ 
+        textAlign: 'center', 
+        color: '#999', 
+        padding: '3rem 1rem',
+        background: '#f9f9f9',
+        borderRadius: 8,
+        border: '1px dashed #ddd'
+      }}>
+        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>No user data</div>
+        <div style={{ fontSize: 12 }}>User data will appear once you have registrations</div>
+      </div>
+    );
+  }
+
+  const chartData = [
+    { name: 'Verified', value: data.verified, color: '#10B981' },
+    { name: 'Unverified', value: data.unverified, color: '#EF4444' }
+  ].filter(item => item.value > 0);
+
+  const verificationRate = total > 0 ? ((data.verified / total) * 100).toFixed(1) : 0;
+
+  return (
+    <div>
+      <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+        <div style={{ fontSize: 32, fontWeight: 900, color: '#10B981' }}>{verificationRate}%</div>
+        <div style={{ fontSize: 12, color: '#666', textTransform: 'uppercase', fontWeight: 700 }}>Verification Rate</div>
+      </div>
+      <ResponsiveContainer width="100%" height={200}>
+        <PieChart>
+          <Pie
+            data={chartData}
+            cx="50%"
+            cy="50%"
+            innerRadius={50}
+            outerRadius={70}
+            fill="#8884d8"
+            dataKey="value"
+            stroke="none"
+            style={{ fontSize: '13px', fontWeight: 600 }}
+          >
+            {chartData.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+            ))}
+          </Pie>
+          <Tooltip formatter={(value) => value.toLocaleString()} contentStyle={{ fontSize: '13px', fontWeight: 600, borderRadius: 8 }} />
+          <Legend wrapperStyle={{ fontSize: '13px', fontWeight: 600 }} iconType="circle" />
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+function SessionsBarChart({ data }) {
+  const chartData = [
+    { name: 'Instagram', value: data.instagram, fill: '#E4405F' },
+    { name: 'Facebook', value: data.facebook, fill: '#1877F2' },
+    { name: 'YouTube', value: data.youtube, fill: '#FF0000' },
+    { name: 'Google', value: data.google, fill: '#4285F4' },
+    { name: 'Others', value: data.others, fill: '#6366F1' }
+  ].filter(item => item.value > 0);
+
+  if (chartData.length === 0) {
+    return (
+      <div style={{ 
+        textAlign: 'center', 
+        color: '#999', 
+        padding: '3rem 1rem',
+        background: '#f9f9f9',
+        borderRadius: 8,
+        border: '1px dashed #ddd'
+      }}>
+        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>No session data</div>
+        <div style={{ fontSize: 12 }}>Sessions will appear here once users visit your site</div>
+      </div>
+    );
+  }
+
+  return (
+    <ResponsiveContainer width="100%" height={300}>
+      <BarChart data={chartData} layout="vertical">
+        <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" />
+        <XAxis type="number" tick={{ fontSize: 12 }} />
+        <YAxis dataKey="name" type="category" tick={{ fontSize: 12, fontWeight: 600 }} width={80} />
+        <Tooltip formatter={(value) => value.toLocaleString()} contentStyle={{ fontSize: '13px', fontWeight: 600, borderRadius: 8 }} />
+        <Bar dataKey="value" radius={[0, 8, 8, 0]}>
+          {chartData.map((entry, index) => (
+            <Cell key={`cell-${index}`} fill={entry.fill} />
+          ))}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+function ActivityBarChart({ data }) {
+  const chartData = [
+    { name: 'New Users', value: data.newUsers, fill: '#6366F1' },
+    { name: 'New Subscribers', value: data.newNewsletters, fill: '#8B5CF6' }
+  ];
+
+  return (
+    <ResponsiveContainer width="100%" height={300}>
+      <BarChart data={chartData}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" />
+        <XAxis dataKey="name" tick={{ fontSize: 12, fontWeight: 600 }} />
+        <YAxis tick={{ fontSize: 12 }} />
+        <Tooltip formatter={(value) => value.toLocaleString()} contentStyle={{ fontSize: '13px', fontWeight: 600, borderRadius: 8 }} />
+        <Bar dataKey="value" radius={[8, 8, 0, 0]}>
+          {chartData.map((entry, index) => (
+            <Cell key={`cell-${index}`} fill={entry.fill} />
+          ))}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+function SessionsTimelineChart({ data, loading }) {
+  const [showTotal, setShowTotal] = useState(false);
+
+  if (loading) {
+    return (
+      <div style={{
+        border: '1px solid #d0d0d0',
+        borderRadius: 12,
+        padding: '1.5rem',
+        background: '#fff',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.08)'
+      }}>
+        <div style={{ textAlign: 'center', color: '#999', padding: '2rem' }}>Loading timeline...</div>
+      </div>
+    );
+  }
+
+  if (!data || data.length === 0) {
+    return (
+      <div style={{
+        border: '1px solid #d0d0d0',
+        borderRadius: 12,
+        padding: '1.5rem',
+        background: '#fff',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.08)'
+      }}>
+        <div style={{ textAlign: 'center', color: '#999', padding: '2rem' }}>No timeline data available</div>
+      </div>
+    );
+  }
+
+  const formattedData = data.map(item => ({
+    ...item,
+    date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  }));
+
+  // Check which platforms have any sessions across all days
+  const platformHasSessions = {
+    instagram: data.some(d => d.instagram > 0),
+    facebook: data.some(d => d.facebook > 0),
+    youtube: data.some(d => d.youtube > 0),
+    google: data.some(d => d.google > 0),
+    others: data.some(d => d.others > 0)
+  };
+
+  return (
+    <div style={{
+      border: '1px solid #d0d0d0',
+      borderRadius: 12,
+      padding: '1.5rem',
+      background: '#fff',
+      boxShadow: '0 1px 3px rgba(0,0,0,0.08)'
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+        <div>
+          <h3 style={{ fontSize: 16, fontWeight: 800, color: '#000', margin: 0 }}>Sessions Over Time</h3>
+          <div style={{ fontSize: 11, color: '#666', marginTop: 4, textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.5px' }}>Last 7 Days</div>
+        </div>
+        <button
+          onClick={() => setShowTotal(!showTotal)}
+          style={{
+            padding: '0.5rem 1rem',
+            background: showTotal ? '#000' : '#fff',
+            color: showTotal ? '#fff' : '#000',
+            border: '1px solid #000',
+            borderRadius: 8,
+            fontSize: 12,
+            fontWeight: 700,
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseEnter={(e) => {
+            if (!showTotal) {
+              e.currentTarget.style.background = '#f5f5f5';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!showTotal) {
+              e.currentTarget.style.background = '#fff';
+            }
+          }}
+        >
+          {showTotal ? 'Show Platforms' : 'Show Total Only'}
+        </button>
+      </div>
+
+      <ResponsiveContainer width="100%" height={300}>
+        <LineChart data={formattedData}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" />
+          <XAxis 
+            dataKey="date" 
+            tick={{ fontSize: 11, fontWeight: 600 }} 
+            stroke="#666"
+          />
+          <YAxis 
+            tick={{ fontSize: 11 }} 
+            stroke="#666"
+          />
+          <Tooltip 
+            contentStyle={{ fontSize: '12px', fontWeight: 600, borderRadius: 8, border: '1px solid #ddd' }}
+          />
+          <Legend 
+            wrapperStyle={{ fontSize: '12px', fontWeight: 600 }}
+            iconType="line"
+          />
+          
+          {showTotal ? (
+            <Line 
+              type="monotone" 
+              dataKey="total" 
+              name="Total Sessions"
+              stroke="#000" 
+              strokeWidth={3}
+              dot={{ fill: '#000', r: 4 }}
+              activeDot={{ r: 6 }}
+            />
+          ) : (
+            <>
+              {platformHasSessions.instagram && (
+                <Line 
+                  type="monotone" 
+                  dataKey="instagram" 
+                  name="Instagram"
+                  stroke="#E4405F" 
+                  strokeWidth={2}
+                  dot={{ fill: '#E4405F', r: 3 }}
+                />
+              )}
+              {platformHasSessions.facebook && (
+                <Line 
+                  type="monotone" 
+                  dataKey="facebook" 
+                  name="Facebook"
+                  stroke="#1877F2" 
+                  strokeWidth={2}
+                  dot={{ fill: '#1877F2', r: 3 }}
+                />
+              )}
+              {platformHasSessions.youtube && (
+                <Line 
+                  type="monotone" 
+                  dataKey="youtube" 
+                  name="YouTube"
+                  stroke="#FF0000" 
+                  strokeWidth={2}
+                  dot={{ fill: '#FF0000', r: 3 }}
+                />
+              )}
+              {platformHasSessions.google && (
+                <Line 
+                  type="monotone" 
+                  dataKey="google" 
+                  name="Google"
+                  stroke="#34A853" 
+                  strokeWidth={2}
+                  dot={{ fill: '#34A853', r: 3 }}
+                />
+              )}
+              {platformHasSessions.others && (
+                <Line 
+                  type="monotone" 
+                  dataKey="others" 
+                  name="Others"
+                  stroke="#6366F1" 
+                  strokeWidth={2}
+                  dot={{ fill: '#6366F1', r: 3 }}
+                />
+              )}
+            </>
+          )}
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
 }
