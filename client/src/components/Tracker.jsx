@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { apiFetch } from '../utils/api';
 import { API_BASE } from '../config';
@@ -9,11 +9,44 @@ export default function Tracker() {
   const location = useLocation();
   const lastPathRef = useRef(null);
   const sourceRef = useRef(null);
+  const [consentGiven, setConsentGiven] = useState(hasConsent());
+  const prevConsentRef = useRef(hasConsent());
+  const [trackingTrigger, setTrackingTrigger] = useState(0);
+
+  // Listen for cookie consent changes
+  useEffect(() => {
+    const checkConsent = () => {
+      const newConsent = hasConsent();
+      setConsentGiven(newConsent);
+    };
+
+    // Check consent on mount
+    checkConsent();
+    
+    // Listen for consent changes (both same tab and other tabs)
+    window.addEventListener('consentchange', checkConsent);
+    window.addEventListener('storage', checkConsent);
+
+    return () => {
+      window.removeEventListener('consentchange', checkConsent);
+      window.removeEventListener('storage', checkConsent);
+    };
+  }, []);
+
+  // Detect when consent changes from false to true
+  useEffect(() => {
+    if (consentGiven && !prevConsentRef.current) {
+      // Consent just changed from false to true - reset to allow tracking
+      lastPathRef.current = null;
+      setTrackingTrigger(prev => prev + 1);
+    }
+    prevConsentRef.current = consentGiven;
+  }, [consentGiven]);
 
   useEffect(() => {
     try {
       // If user has not consented to optional cookies, skip tracking
-      if (!hasConsent()) return;
+      if (!consentGiven) return;
 
       // Deduplicate to avoid React Strict Mode double-invoking effects in dev
       const prevPath = lastPathRef.current;
@@ -57,7 +90,7 @@ export default function Tracker() {
       // Also send to Google Analytics (if enabled and user has consented)
       trackPageView(location.pathname, document.title);
     } catch (_) {}
-  }, [location.pathname]);
+  }, [location.pathname, consentGiven, trackingTrigger]);
 
   return null;
 }

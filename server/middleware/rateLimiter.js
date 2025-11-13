@@ -162,18 +162,19 @@ export const globalLimiter = rateLimit({
 });
 
 // Log rate limiter initialization
-console.log('✅ Rate limiters initialized');
-console.log('   DEBUG: ENABLE_RATE_LIMIT =', process.env.ENABLE_RATE_LIMIT);
+import logger from '../utils/logger.js';
+logger.info('Rate limiters initialized');
+logger.info(`ENABLE_RATE_LIMIT = ${process.env.ENABLE_RATE_LIMIT}`);
 if (process.env.ENABLE_RATE_LIMIT === 'true') {
-  console.log('   Auth (password/register): 5 requests per 30 minutes');
-  console.log('   Auth (OAuth): 5 requests per 15 minutes');
-  console.log('   Auth (general): 15 requests per 30 minutes');
-  console.log('   Subscribe endpoint: 3 requests per 15 minutes');
-  console.log('   Admin endpoints: 30 requests per 15 minutes');
-  console.log('   Tracking endpoints: 500 requests per 15 minutes');
-  console.log('   General API: 100 requests per 15 minutes');
-  console.log('   Global fallback: 200 requests per 15 minutes');
+  logger.info('Auth (password/register): 5 requests per 30 minutes');
+  logger.info('Auth (OAuth): 5 requests per 15 minutes');
+  logger.info('Auth (general): 15 requests per 30 minutes');
+  logger.info('Subscribe endpoint: 3 requests per 15 minutes');
+  logger.info('Admin endpoints: 30 requests per 15 minutes');
+  logger.info('Tracking endpoints: 500 requests per 15 minutes');
+  logger.info('General API: 100 requests per 15 minutes');
+  logger.info('Global fallback: 200 requests per 15 minutes');
 } else {
-  console.log('   ⚠️  Rate limiting DISABLED');
-  console.log('   💡 Set ENABLE_RATE_LIMIT=true to enable rate limiting');
+  logger.warn('Rate limiting DISABLED');
+  logger.info('Set ENABLE_RATE_LIMIT=true to enable rate limiting');
 }

@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import pool from "../utils/db.js";
+import cache from "../utils/cache.js";
 
 /**
  * Verify JWT token from request (cookie or Authorization header)
@@ -97,19 +98,28 @@ export async function requireAdmin(req, res, next) {
   let role = currentUser?.role || null;
   let email = currentUser?.email || null;
 
-  // Always verify role from database when JWT is present (to handle stale JWTs)
+  // Verify role from cache or database when JWT is present (to handle stale JWTs)
   if (decoded?.sub) {
-    try {
-      const { rows } = await pool.query(
-        'SELECT email, role FROM users WHERE id = $1 AND deleted_at IS NULL', 
-        [decoded.sub]
-      );
-      if (rows[0]) {
-        role = rows[0].role;
-        email = rows[0].email || email;
+    const cacheKey = `admin_role:${decoded.sub}`;
+    const cached = cache.get(cacheKey);
+    if (cached && cached.role) {
+      role = cached.role;
+      email = cached.email || email;
+    } else {
+      try {
+        const { rows } = await pool.query(
+          'SELECT email, role FROM users WHERE id = $1 AND deleted_at IS NULL', 
+          [decoded.sub]
+        );
+        if (rows[0]) {
+          role = rows[0].role;
+          email = rows[0].email || email;
+          // Cache for 5 minutes to reduce DB load
+          cache.set(cacheKey, { role, email }, 300);
+        }
+      } catch (_) {
+        // If DB not available, we fall back to token/session role
       }
-    } catch (_) {
-      // If DB not available, we fall back to token/session role
     }
   }
 

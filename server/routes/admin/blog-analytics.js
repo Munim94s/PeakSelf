@@ -2,6 +2,7 @@ import express from 'express';
 import pool from '../../utils/db.js';
 import logger from '../../utils/logger.js';
 import { success, error as errorResponse } from '../../utils/response.js';
+import cache from '../../utils/cache.js';
 
 const router = express.Router();
 
@@ -9,6 +10,15 @@ const router = express.Router();
 // Dashboard overview for all blog posts
 router.get('/', async (req, res) => {
   try {
+    // Check cache first
+    const cacheKey = 'blog_analytics:overview';
+    if (!req.query.nocache) {
+      const cached = cache.get(cacheKey);
+      if (cached) {
+        return res.json({ ...cached, cached: true });
+      }
+    }
+
     // Aggregate metrics across all posts
     const overviewResult = await pool.query(`
       SELECT 
@@ -45,11 +55,16 @@ router.get('/', async (req, res) => {
       LIMIT 5
     `);
     
-    return success(res, {
+    const result = {
       overview: overviewResult.rows[0],
       recent_activity: recentActivity.rows[0],
       top_posts_week: topPostsWeek.rows
-    });
+    };
+
+    // Cache for 60 seconds
+    cache.set(cacheKey, result, 60);
+
+    return success(res, result);
   } catch (err) {
     logger.error('Error fetching analytics overview:', err);
     return errorResponse(res, 'Failed to fetch analytics overview', 500);
@@ -136,68 +151,113 @@ router.get('/comparison', async (req, res) => {
 router.get('/leaderboard', async (req, res) => {
   try {
     const leaderboardLimit = 10;
-    
-    // Most viewed
-    const mostViewed = await pool.query(`
-      SELECT bp.id, bp.title, bp.slug, bpa.total_views, bpa.unique_visitors
-      FROM blog_posts bp
-      JOIN blog_post_analytics bpa ON bp.id = bpa.post_id
-      WHERE bpa.total_views > 0
-      ORDER BY bpa.total_views DESC
-      LIMIT $1
+
+    const { rows } = await pool.query(`
+      WITH base AS (
+        SELECT bp.id, bp.title, bp.slug,
+               bpa.total_views, bpa.unique_visitors,
+               bpa.engagement_rate, bpa.total_shares,
+               bpa.avg_time_on_page, bpa.newsletter_signups
+        FROM blog_posts bp
+        JOIN blog_post_analytics bpa ON bp.id = bpa.post_id
+      )
+      (
+        SELECT 'most_viewed' AS category,
+               id, title, slug, total_views, unique_visitors,
+               NULL::numeric AS engagement_rate,
+               NULL::int AS total_shares,
+               NULL::int AS avg_time_on_page,
+               NULL::numeric AS conversion_rate
+        FROM base
+        WHERE total_views > 0
+        ORDER BY total_views DESC
+        LIMIT $1
+      )
+      UNION ALL
+      (
+        SELECT 'highest_engagement' AS category,
+               id, title, slug, total_views, unique_visitors,
+               engagement_rate,
+               NULL::int,
+               NULL::int,
+               NULL::numeric
+        FROM base
+        WHERE total_views >= 10
+        ORDER BY engagement_rate DESC
+        LIMIT $1
+      )
+      UNION ALL
+      (
+        SELECT 'most_shared' AS category,
+               id, title, slug, total_views, unique_visitors,
+               NULL::numeric,
+               total_shares,
+               NULL::int,
+               NULL::numeric
+        FROM base
+        WHERE total_shares > 0
+        ORDER BY total_shares DESC
+        LIMIT $1
+      )
+      UNION ALL
+      (
+        SELECT 'longest_read_time' AS category,
+               id, title, slug, total_views, unique_visitors,
+               NULL::numeric,
+               NULL::int,
+               avg_time_on_page,
+               NULL::numeric
+        FROM base
+        WHERE total_views >= 10
+        ORDER BY avg_time_on_page DESC
+        LIMIT $1
+      )
+      UNION ALL
+      (
+        SELECT 'best_conversion' AS category,
+               id, title, slug, total_views, unique_visitors,
+               NULL::numeric,
+               NULL::int,
+               NULL::int,
+               CASE WHEN total_views > 0 
+                 THEN ROUND((newsletter_signups::DECIMAL / total_views * 100), 2)
+                 ELSE 0
+               END as conversion_rate
+        FROM base
+        WHERE newsletter_signups > 0
+        ORDER BY conversion_rate DESC
+        LIMIT $1
+      )
     `, [leaderboardLimit]);
-    
-    // Highest engagement rate
-    const highestEngagement = await pool.query(`
-      SELECT bp.id, bp.title, bp.slug, bpa.engagement_rate, bpa.total_views
-      FROM blog_posts bp
-      JOIN blog_post_analytics bpa ON bp.id = bpa.post_id
-      WHERE bpa.total_views >= 10
-      ORDER BY bpa.engagement_rate DESC
-      LIMIT $1
-    `, [leaderboardLimit]);
-    
-    // Most shared
-    const mostShared = await pool.query(`
-      SELECT bp.id, bp.title, bp.slug, bpa.total_shares, bpa.total_views
-      FROM blog_posts bp
-      JOIN blog_post_analytics bpa ON bp.id = bpa.post_id
-      WHERE bpa.total_shares > 0
-      ORDER BY bpa.total_shares DESC
-      LIMIT $1
-    `, [leaderboardLimit]);
-    
-    // Longest read time
-    const longestReadTime = await pool.query(`
-      SELECT bp.id, bp.title, bp.slug, bpa.avg_time_on_page, bpa.total_views
-      FROM blog_posts bp
-      JOIN blog_post_analytics bpa ON bp.id = bpa.post_id
-      WHERE bpa.total_views >= 10
-      ORDER BY bpa.avg_time_on_page DESC
-      LIMIT $1
-    `, [leaderboardLimit]);
-    
-    // Best conversion (newsletter signups)
-    const bestConversion = await pool.query(`
-      SELECT bp.id, bp.title, bp.slug, bpa.newsletter_signups, bpa.total_views,
-        CASE WHEN bpa.total_views > 0 
-          THEN ROUND((bpa.newsletter_signups::DECIMAL / bpa.total_views * 100), 2)
-          ELSE 0
-        END as conversion_rate
-      FROM blog_posts bp
-      JOIN blog_post_analytics bpa ON bp.id = bpa.post_id
-      WHERE bpa.newsletter_signups > 0
-      ORDER BY conversion_rate DESC
-      LIMIT $1
-    `, [leaderboardLimit]);
-    
-    return success(res, {
-      most_viewed: mostViewed.rows,
-      highest_engagement: highestEngagement.rows,
-      most_shared: mostShared.rows,
-      longest_read_time: longestReadTime.rows,
-      best_conversion: bestConversion.rows
-    });
+
+    // Split rows into categories
+    const most_viewed = [];
+    const highest_engagement = [];
+    const most_shared = [];
+    const longest_read_time = [];
+    const best_conversion = [];
+
+    for (const r of rows) {
+      switch (r.category) {
+        case 'most_viewed':
+          most_viewed.push({ id: r.id, title: r.title, slug: r.slug, total_views: r.total_views, unique_visitors: r.unique_visitors });
+          break;
+        case 'highest_engagement':
+          highest_engagement.push({ id: r.id, title: r.title, slug: r.slug, engagement_rate: r.engagement_rate, total_views: r.total_views });
+          break;
+        case 'most_shared':
+          most_shared.push({ id: r.id, title: r.title, slug: r.slug, total_shares: r.total_shares, total_views: r.total_views });
+          break;
+        case 'longest_read_time':
+          longest_read_time.push({ id: r.id, title: r.title, slug: r.slug, avg_time_on_page: r.avg_time_on_page, total_views: r.total_views });
+          break;
+        case 'best_conversion':
+          best_conversion.push({ id: r.id, title: r.title, slug: r.slug, newsletter_signups: r.newsletter_signups, total_views: r.total_views, conversion_rate: r.conversion_rate });
+          break;
+      }
+    }
+
+    return success(res, { most_viewed, highest_engagement, most_shared, longest_read_time, best_conversion });
   } catch (err) {
     logger.error('Error fetching leaderboard:', err);
     return errorResponse(res, 'Failed to fetch leaderboard', 500);
@@ -330,6 +390,7 @@ router.get('/:postId/timeline', async (req, res) => {
     const { postId } = req.params;
     const { days = 30 } = req.query;
     
+    const daysInt = Math.max(1, Math.min(90, parseInt(days))); // Cap at 90 days for performance
     const result = await pool.query(`
       SELECT 
         stat_date,
@@ -342,9 +403,9 @@ router.get('/:postId/timeline', async (req, res) => {
         newsletter_signups
       FROM blog_post_daily_stats
       WHERE post_id = $1 
-        AND stat_date >= CURRENT_DATE - INTERVAL '${parseInt(days)} days'
+        AND stat_date >= CURRENT_DATE - ($2::int * INTERVAL '1 day')
       ORDER BY stat_date ASC
-    `, [postId]);
+    `, [postId, daysInt]);
     
     return success(res, { timeline: result.rows });
   } catch (err) {
@@ -359,41 +420,54 @@ router.get('/:postId/audience', async (req, res) => {
   try {
     const { postId } = req.params;
     
-    // Visitor types
-    const visitorTypes = await pool.query(`
+    // Combined query for all audience metrics
+    const result = await pool.query(`
+      WITH visitor_metrics AS (
+        SELECT 
+          COUNT(DISTINCT visitor_id) FILTER (WHERE is_landing_page = TRUE) as new_visitors,
+          COUNT(DISTINCT visitor_id) FILTER (WHERE is_landing_page = FALSE) as returning_visitors,
+          COUNT(DISTINCT visitor_id) as total_visitors,
+          COUNT(*) FILTER (WHERE user_id IS NULL) as anonymous,
+          COUNT(*) FILTER (WHERE user_id IS NOT NULL) as registered,
+          COUNT(DISTINCT user_id) as unique_users
+        FROM blog_post_sessions
+        WHERE post_id = $1
+      ),
+      traffic_sources AS (
+        SELECT 
+          jsonb_agg(
+            jsonb_build_object('traffic_source', traffic_source, 'count', count)
+            ORDER BY count DESC
+          ) as sources
+        FROM (
+          SELECT traffic_source, COUNT(*) as count
+          FROM blog_post_sessions
+          WHERE post_id = $1
+          GROUP BY traffic_source
+          ORDER BY count DESC
+        ) t
+      )
       SELECT 
-        COUNT(DISTINCT visitor_id) FILTER (WHERE is_landing_page = TRUE) as new_visitors,
-        COUNT(DISTINCT visitor_id) FILTER (WHERE is_landing_page = FALSE) as returning_visitors,
-        COUNT(DISTINCT visitor_id) as total_visitors
-      FROM blog_post_sessions
-      WHERE post_id = $1
+        vm.new_visitors, vm.returning_visitors, vm.total_visitors,
+        vm.anonymous, vm.registered, vm.unique_users,
+        COALESCE(ts.sources, '[]'::jsonb) as traffic_sources
+      FROM visitor_metrics vm, traffic_sources ts
     `, [postId]);
     
-    // Traffic sources
-    const trafficSources = await pool.query(`
-      SELECT 
-        traffic_source,
-        COUNT(*) as count
-      FROM blog_post_sessions
-      WHERE post_id = $1
-      GROUP BY traffic_source
-      ORDER BY count DESC
-    `, [postId]);
-    
-    // User segments
-    const userSegments = await pool.query(`
-      SELECT 
-        COUNT(*) FILTER (WHERE user_id IS NULL) as anonymous,
-        COUNT(*) FILTER (WHERE user_id IS NOT NULL) as registered,
-        COUNT(DISTINCT user_id) as unique_users
-      FROM blog_post_sessions
-      WHERE post_id = $1
-    `, [postId]);
+    const data = result.rows[0];
     
     return success(res, {
-      visitor_types: visitorTypes.rows[0],
-      traffic_sources: trafficSources.rows,
-      user_segments: userSegments.rows[0]
+      visitor_types: {
+        new_visitors: parseInt(data.new_visitors),
+        returning_visitors: parseInt(data.returning_visitors),
+        total_visitors: parseInt(data.total_visitors)
+      },
+      traffic_sources: data.traffic_sources,
+      user_segments: {
+        anonymous: parseInt(data.anonymous),
+        registered: parseInt(data.registered),
+        unique_users: parseInt(data.unique_users)
+      }
     });
   } catch (err) {
     logger.error('Error fetching audience data:', err);
@@ -407,46 +481,63 @@ router.get('/:postId/heatmap', async (req, res) => {
   try {
     const { postId } = req.params;
     
-    // Scroll depth distribution
-    const scrollDistribution = await pool.query(`
+    // Combined query for all heatmap metrics
+    const result = await pool.query(`
+      WITH session_metrics AS (
+        SELECT 
+          COUNT(*) FILTER (WHERE max_scroll_depth < 25) as scroll_0_25,
+          COUNT(*) FILTER (WHERE max_scroll_depth >= 25 AND max_scroll_depth < 50) as scroll_25_50,
+          COUNT(*) FILTER (WHERE max_scroll_depth >= 50 AND max_scroll_depth < 75) as scroll_50_75,
+          COUNT(*) FILTER (WHERE max_scroll_depth >= 75 AND max_scroll_depth < 100) as scroll_75_100,
+          COUNT(*) FILTER (WHERE max_scroll_depth >= 100) as scroll_100,
+          COUNT(*) FILTER (WHERE time_on_page < 30) as time_0_30,
+          COUNT(*) FILTER (WHERE time_on_page >= 30 AND time_on_page < 60) as time_30_60,
+          COUNT(*) FILTER (WHERE time_on_page >= 60 AND time_on_page < 120) as time_60_120,
+          COUNT(*) FILTER (WHERE time_on_page >= 120 AND time_on_page < 300) as time_120_300,
+          COUNT(*) FILTER (WHERE time_on_page >= 300) as time_300_plus
+        FROM blog_post_sessions
+        WHERE post_id = $1
+      ),
+      click_events AS (
+        SELECT 
+          jsonb_agg(
+            jsonb_build_object('event_type', event_type, 'count', count)
+            ORDER BY count DESC
+          ) as events
+        FROM (
+          SELECT event_type, COUNT(*) as count
+          FROM blog_engagement_events
+          WHERE post_id = $1 
+            AND event_type IN ('click', 'cta_click', 'share', 'outbound_click', 'internal_click')
+          GROUP BY event_type
+          ORDER BY count DESC
+        ) e
+      )
       SELECT 
-        COUNT(*) FILTER (WHERE max_scroll_depth < 25) as "0-25%",
-        COUNT(*) FILTER (WHERE max_scroll_depth >= 25 AND max_scroll_depth < 50) as "25-50%",
-        COUNT(*) FILTER (WHERE max_scroll_depth >= 50 AND max_scroll_depth < 75) as "50-75%",
-        COUNT(*) FILTER (WHERE max_scroll_depth >= 75 AND max_scroll_depth < 100) as "75-100%",
-        COUNT(*) FILTER (WHERE max_scroll_depth >= 100) as "100%"
-      FROM blog_post_sessions
-      WHERE post_id = $1
+        sm.scroll_0_25, sm.scroll_25_50, sm.scroll_50_75, sm.scroll_75_100, sm.scroll_100,
+        sm.time_0_30, sm.time_30_60, sm.time_60_120, sm.time_120_300, sm.time_300_plus,
+        COALESCE(ce.events, '[]'::jsonb) as click_events
+      FROM session_metrics sm, click_events ce
     `, [postId]);
     
-    // Time spent distribution
-    const timeDistribution = await pool.query(`
-      SELECT 
-        COUNT(*) FILTER (WHERE time_on_page < 30) as "0-30s",
-        COUNT(*) FILTER (WHERE time_on_page >= 30 AND time_on_page < 60) as "30s-1m",
-        COUNT(*) FILTER (WHERE time_on_page >= 60 AND time_on_page < 120) as "1-2m",
-        COUNT(*) FILTER (WHERE time_on_page >= 120 AND time_on_page < 300) as "2-5m",
-        COUNT(*) FILTER (WHERE time_on_page >= 300) as "5m+"
-      FROM blog_post_sessions
-      WHERE post_id = $1
-    `, [postId]);
-    
-    // Click events by type
-    const clickEvents = await pool.query(`
-      SELECT 
-        event_type,
-        COUNT(*) as count
-      FROM blog_engagement_events
-      WHERE post_id = $1 
-        AND event_type IN ('click', 'cta_click', 'share', 'outbound_click', 'internal_click')
-      GROUP BY event_type
-      ORDER BY count DESC
-    `, [postId]);
+    const data = result.rows[0];
     
     return success(res, {
-      scroll_distribution: scrollDistribution.rows[0],
-      time_distribution: timeDistribution.rows[0],
-      click_events: clickEvents.rows
+      scroll_distribution: {
+        "0-25%": parseInt(data.scroll_0_25),
+        "25-50%": parseInt(data.scroll_25_50),
+        "50-75%": parseInt(data.scroll_50_75),
+        "75-100%": parseInt(data.scroll_75_100),
+        "100%": parseInt(data.scroll_100)
+      },
+      time_distribution: {
+        "0-30s": parseInt(data.time_0_30),
+        "30s-1m": parseInt(data.time_30_60),
+        "1-2m": parseInt(data.time_60_120),
+        "2-5m": parseInt(data.time_120_300),
+        "5m+": parseInt(data.time_300_plus)
+      },
+      click_events: data.click_events
     });
   } catch (err) {
     logger.error('Error fetching heatmap data:', err);

@@ -13,7 +13,9 @@ const pool = new Pool({
   connectionString: dbUrl,
   connectionTimeoutMillis: 5000,
   idleTimeoutMillis: 30000,
-  max: 10
+  max: process.env.NODE_ENV === 'production' ? 20 : 10, // Increased for production traffic
+  min: 2, // Keep minimum idle connections
+  allowExitOnIdle: false
 });
 
 // Track database availability status

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import api from '../api/client';
+import { hasConsent } from '../utils/consent';
 
 /**
  * Hook to track blog post engagement
@@ -11,6 +12,9 @@ import api from '../api/client';
  */
 export function useBlogEngagementTracking(postId, enabled = true) {
   const location = useLocation();
+  const [consentGiven, setConsentGiven] = useState(hasConsent());
+  const prevConsentRef = useRef(hasConsent());
+  const [trackingTrigger, setTrackingTrigger] = useState(0);
   const [tracked, setTracked] = useState({
     view: false,
     scroll25: false,
@@ -27,16 +31,47 @@ export function useBlogEngagementTracking(postId, enabled = true) {
   const startTimeRef = useRef(null);
   const timeTrackerRef = useRef(null);
 
-  // Track event helper
-  const trackEvent = async (eventType, eventData = {}) => {
-    if (!enabled || !postId) return;
+  // Listen for cookie consent changes
+  useEffect(() => {
+    const checkConsent = () => {
+      const newConsent = hasConsent();
+      setConsentGiven(newConsent);
+    };
+
+    // Check consent on mount
+    checkConsent();
+    
+    // Listen for consent changes (both same tab and other tabs)
+    window.addEventListener('consentchange', checkConsent);
+    window.addEventListener('storage', checkConsent);
+
+    return () => {
+      window.removeEventListener('consentchange', checkConsent);
+      window.removeEventListener('storage', checkConsent);
+    };
+  }, []);
+
+  // Track event helper with retry logic
+  const trackEvent = async (eventType, eventData = {}, retryCount = 0) => {
+    if (!enabled || !postId || !consentGiven) return;
     
     try {
+      // Extract source from URL params (e.g., ?src=instagram)
+      const urlParams = new URLSearchParams(window.location.search);
+      const source = urlParams.get('src') || urlParams.get('source') || urlParams.get('utm_source');
+      
       await api.post(`/api/track/blog/${postId}/engagement`, {
         event_type: eventType,
-        event_data: eventData
+        event_data: eventData,
+        source: source || undefined, // Only include if present
+        referrer: document.referrer || undefined
       });
     } catch (error) {
+      // If we get a 400 error (likely "tracking cookies not found"), retry after delay
+      if (error.status === 400 && retryCount < 5) {
+        await new Promise(resolve => setTimeout(resolve, 200 * (retryCount + 1)));
+        return trackEvent(eventType, eventData, retryCount + 1);
+      }
       // Silent fail - don't disrupt user experience
     }
   };
@@ -74,9 +109,32 @@ export function useBlogEngagementTracking(postId, enabled = true) {
     return Math.floor((Date.now() - startTimeRef.current) / 1000);
   };
 
-  // Track page view on mount
+  // Detect when consent changes from false to true
   useEffect(() => {
-    if (!enabled || !postId) return;
+    if (consentGiven && !prevConsentRef.current) {
+      // Consent just changed from false to true - reset everything and trigger new tracking
+      setTracked({
+        view: false,
+        scroll25: false,
+        scroll50: false,
+        scroll75: false,
+        scroll100: false,
+        time10: false,
+        time30: false,
+        time60: false,
+        time120: false,
+        time300: false
+      });
+      startTimeRef.current = null;
+      // Increment trigger to force tracking effects to re-run
+      setTrackingTrigger(prev => prev + 1);
+    }
+    prevConsentRef.current = consentGiven;
+  }, [consentGiven]);
+
+  // Track page view on mount or when consent is given
+  useEffect(() => {
+    if (!enabled || !postId || !consentGiven) return;
 
     // Only track view once
     if (!tracked.view) {
@@ -125,11 +183,11 @@ export function useBlogEngagementTracking(postId, enabled = true) {
         trackEvent('exit', { time_on_page: timeSpent });
       }
     };
-  }, [postId, enabled]);
+  }, [postId, enabled, consentGiven, trackingTrigger]);
 
   // Track scroll depth
   useEffect(() => {
-    if (!enabled || !postId) return;
+    if (!enabled || !postId || !consentGiven) return;
 
     let ticking = false;
 
@@ -170,11 +228,11 @@ export function useBlogEngagementTracking(postId, enabled = true) {
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
-  }, [postId, enabled, tracked.scroll25, tracked.scroll50, tracked.scroll75, tracked.scroll100]);
+  }, [postId, enabled, consentGiven, tracked.scroll25, tracked.scroll50, tracked.scroll75, tracked.scroll100]);
 
   // Track page visibility (for accurate time tracking)
   useEffect(() => {
-    if (!enabled || !postId) return;
+    if (!enabled || !postId || !consentGiven) return;
 
     let hiddenTime = null;
 
@@ -196,31 +254,38 @@ export function useBlogEngagementTracking(postId, enabled = true) {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [postId, enabled]);
+  }, [postId, enabled, consentGiven]);
 
   // Track exit on beforeunload (page close/refresh)
   useEffect(() => {
-    if (!enabled || !postId) return;
+    if (!enabled || !postId || !consentGiven) return;
 
     const handleBeforeUnload = () => {
       const timeSpent = getTimeSpent();
       if (timeSpent > 0) {
-        // Use sendBeacon for reliable tracking on page unload
+        // Extract source from URL params for beacon
+        const urlParams = new URLSearchParams(window.location.search);
+        const source = urlParams.get('src') || urlParams.get('source') || urlParams.get('utm_source');
+        
         const data = JSON.stringify({
           event_type: 'exit',
-          event_data: { time_on_page: timeSpent }
+          event_data: { time_on_page: timeSpent },
+          source: source || undefined,
+          referrer: document.referrer || undefined
         });
         
         // Try sendBeacon first (more reliable)
+        // Note: sendBeacon automatically includes credentials (cookies)
         if (navigator.sendBeacon) {
           const blob = new Blob([data], { type: 'application/json' });
           navigator.sendBeacon(`/api/track/blog/${postId}/engagement`, blob);
         } else {
-          // Fallback to synchronous XHR
+          // Fallback to synchronous XHR with credentials
           try {
             const xhr = new XMLHttpRequest();
             xhr.open('POST', `/api/track/blog/${postId}/engagement`, false);
             xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.withCredentials = true; // Include cookies
             xhr.send(data);
           } catch (e) {
             // Silent fail
@@ -234,7 +299,7 @@ export function useBlogEngagementTracking(postId, enabled = true) {
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [postId, enabled]);
+  }, [postId, enabled, consentGiven]);
 
   // Public methods for manual tracking
   const trackCTAClick = (ctaName) => {

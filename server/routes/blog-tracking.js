@@ -3,6 +3,7 @@ import pool from '../utils/db.js';
 import logger from '../utils/logger.js';
 import { success, error as errorResponse } from '../utils/response.js';
 import { TRACKING_COOKIES } from '../constants.js';
+import analyticsQueue from '../utils/analyticsQueue.js';
 
 const router = express.Router();
 
@@ -15,9 +16,41 @@ function getTrackingIds(req) {
   return { sessionId, visitorId, userId };
 }
 
-// Helper to determine traffic source
+// Helper to categorize traffic source from query params, cookies, or referrer
+function categorizeSource(sourceHint, referrer) {
+  const s = (sourceHint || "").toLowerCase();
+  const r = (referrer || "").toLowerCase();
+  if (s.includes('instagram') || r.includes('instagram.com')) return 'instagram';
+  if (s.includes('facebook') || s.includes('fb') || r.includes('facebook.com') || r.includes('fb.com')) return 'facebook';
+  if (s.includes('youtube') || r.includes('youtube.com') || r.includes('youtu.be')) return 'youtube';
+  if (s.includes('google') || r.includes('google.')) return 'google';
+  if (s.includes('twitter') || s.includes('x.com') || r.includes('twitter.com') || r.includes('x.com')) return 'twitter';
+  if (!r && !s) return 'direct';
+  return 'other';
+}
+
+// Helper to determine traffic source from request
 function getTrafficSource(req) {
-  return req.cookies?.[TRACKING_COOKIES.SOURCE] || 'other';
+  // Check for explicit source in request body (from client-side tracking)
+  const bodySource = req.body?.source;
+  
+  // Check for source cookie (from initial page visit)
+  const cookieSource = req.cookies?.[TRACKING_COOKIES.SOURCE];
+  
+  // Get referrer
+  const referrer = req.get('referer') || req.body?.referrer || null;
+  
+  // Prioritize: explicit body source > cookie source > categorized from referrer
+  if (bodySource) {
+    return categorizeSource(bodySource, referrer);
+  }
+  
+  if (cookieSource && cookieSource !== 'other') {
+    return cookieSource;
+  }
+  
+  // Fall back to categorizing from referrer
+  return categorizeSource(null, referrer);
 }
 
 // Calculate engagement score based on analytics
@@ -230,67 +263,36 @@ router.post('/:postId/engagement', async (req, res) => {
       `, [postId, sessionId, visitorId, userId, trafficSource, referrer, isLandingPage]);
     }
 
-    // Update blog_post_sessions based on event type
-    if (event_type === 'scroll_milestone') {
-      const depth = event_data.depth || 0;
-      const readToEnd = depth >= 100;
-      
-      await client.query(`
-        UPDATE blog_post_sessions 
-        SET 
-          max_scroll_depth = GREATEST(max_scroll_depth, $1),
-          read_to_end = read_to_end OR $2,
-          was_engaged = was_engaged OR ($1 >= 25)
-        WHERE session_id = $3 AND post_id = $4
-      `, [depth, readToEnd, sessionId, postId]);
-    }
+    // Consolidated update using CASE expressions to avoid multiple queries per event
+    const depth = Number(event_data.depth || 0);
+    const seconds = Number(event_data.seconds || 0);
+    const exitTime = Number(event_data.time_on_page || 0);
 
-    if (event_type === 'time_milestone') {
-      const seconds = event_data.seconds || 0;
-      
-      await client.query(`
-        UPDATE blog_post_sessions 
-        SET 
-          time_on_page = GREATEST(time_on_page, $1),
-          was_engaged = was_engaged OR ($1 >= 30)
-        WHERE session_id = $2 AND post_id = $3
-      `, [seconds, sessionId, postId]);
-    }
-
-    if (event_type === 'cta_click') {
-      await client.query(`
-        UPDATE blog_post_sessions 
-        SET clicked_cta = TRUE, was_engaged = TRUE
-        WHERE session_id = $1 AND post_id = $2
-      `, [sessionId, postId]);
-    }
-
-    if (event_type === 'share') {
-      await client.query(`
-        UPDATE blog_post_sessions 
-        SET shared_content = TRUE, was_engaged = TRUE
-        WHERE session_id = $1 AND post_id = $2
-      `, [sessionId, postId]);
-    }
-
-    if (['form_submit', 'newsletter_signup'].includes(event_type)) {
-      await client.query(`
-        UPDATE blog_post_sessions 
-        SET submitted_form = TRUE, was_engaged = TRUE
-        WHERE session_id = $1 AND post_id = $2
-      `, [sessionId, postId]);
-    }
-
-    if (event_type === 'exit') {
-      await client.query(`
-        UPDATE blog_post_sessions 
-        SET 
-          exited_at = NOW(),
-          is_exit_page = TRUE,
-          time_on_page = GREATEST(time_on_page, $1)
-        WHERE session_id = $2 AND post_id = $3
-      `, [event_data.time_on_page || 0, sessionId, postId]);
-    }
+    await client.query(`
+      UPDATE blog_post_sessions
+      SET
+        -- Scroll depth and engagement from scroll
+        max_scroll_depth = CASE WHEN $1 = 'scroll_milestone' THEN GREATEST(max_scroll_depth, $2) ELSE max_scroll_depth END,
+        read_to_end      = read_to_end OR ($1 = 'scroll_milestone' AND $2 >= 100),
+        -- Time and engagement from time milestones
+        time_on_page     = CASE WHEN $1 = 'time_milestone' THEN GREATEST(time_on_page, $3)
+                                WHEN $1 = 'exit' THEN GREATEST(time_on_page, $4)
+                                ELSE time_on_page END,
+        -- Click/Share/Form engagement flags
+        clicked_cta      = clicked_cta OR ($1 = 'cta_click'),
+        shared_content   = shared_content OR ($1 = 'share'),
+        submitted_form   = submitted_form OR ($1 IN ('form_submit','newsletter_signup')),
+        -- Exit flags
+        exited_at        = CASE WHEN $1 = 'exit' THEN NOW() ELSE exited_at END,
+        is_exit_page     = is_exit_page OR ($1 = 'exit'),
+        -- Overall engagement
+        was_engaged      = was_engaged
+                            OR ($1 = 'scroll_milestone' AND $2 >= 25)
+                            OR ($1 = 'time_milestone' AND $3 >= 30)
+                            OR ($1 IN ('cta_click','share','form_submit','newsletter_signup'))
+      WHERE session_id = $5 AND post_id = $6
+    `, [event_type, depth, seconds, exitTime, sessionId, postId]);
+    
 
     // Record the raw event
     await client.query(`
@@ -300,10 +302,10 @@ router.post('/:postId/engagement', async (req, res) => {
       VALUES ($1, $2, $3, $4, $5, $6)
     `, [postId, sessionId, visitorId, userId, event_type, event_data]);
 
-    // Update aggregated analytics
-    await updatePostAnalytics(client, postId);
-
     await client.query('COMMIT');
+    
+    // Queue analytics update (non-blocking, processed in batches)
+    analyticsQueue.queueUpdate(postId);
     
     return success(res, { tracked: true });
   } catch (err) {

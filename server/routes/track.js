@@ -225,14 +225,14 @@ router.post('/', async (req, res) => {
     const sessionId = sessionResult.id || sessionResult; // Handle both old and new format
     const isNewSession = sessionResult.isNew || false;
 
-    // Record ordered navigation event
-    await pool.query(
-      `INSERT INTO session_events (session_id, path, referrer) VALUES ($1, $2, $3)`,
-      [sessionId, path || '/', referrer]
-    );
-
-    // Opportunistically sync visitor last_seen_at on any event
-    await pool.query('UPDATE visitors SET last_seen_at = NOW() WHERE id = $1', [visitor.id]);
+    // Record ordered navigation event and update visitor last_seen_at concurrently
+    await Promise.all([
+      pool.query(
+        `INSERT INTO session_events (session_id, path, referrer) VALUES ($1, $2, $3)`,
+        [sessionId, path || '/', referrer]
+      ),
+      pool.query('UPDATE visitors SET last_seen_at = NOW() WHERE id = $1', [visitor.id])
+    ]);
 
     // Also record a simple traffic event for admin/overview
     try {
@@ -242,7 +242,7 @@ router.post('/', async (req, res) => {
       );
       // Only invalidate caches on new sessions or periodically (to avoid invalidating on every page view)
       // Traffic cache can handle some staleness for performance
-      if (isNewSession) {
+      if (isNewSession || Math.random() < 0.1) {
         invalidate.sessions();
         invalidate.dashboard();
       }

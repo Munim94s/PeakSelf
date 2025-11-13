@@ -37,7 +37,6 @@ router.get('/summary', async (req, res) => {
             (SELECT COUNT(*) FROM users WHERE deleted_at IS NULL)::BIGINT AS total_users,
             (SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '24 hours' AND deleted_at IS NULL)::BIGINT AS signups_24h
         ),
-        ),
         n AS (
           SELECT
             (SELECT COUNT(*) FROM newsletter_subscriptions)::BIGINT AS newsletter_total,

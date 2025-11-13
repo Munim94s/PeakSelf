@@ -5,6 +5,7 @@ import Footer from './components/Footer';
 import Tracker from './components/Tracker';
 import EngagementTracker from './components/EngagementTracker';
 import BrandedLoadingScreen from './components/BrandedLoadingScreen';
+import GlobalLoadingScreen from './components/GlobalLoadingScreen';
 import { ModalProvider } from './contexts/ModalContext';
 import SitePrefsBanner from './components/SitePrefsBanner';
 import './App.css';
@@ -33,6 +34,7 @@ function App() {
   
   return (
     <ModalProvider>
+      <GlobalLoadingScreen />
       <div className="app">
         <Header />
         <Tracker />
