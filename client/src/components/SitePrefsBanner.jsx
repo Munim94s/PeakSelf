@@ -21,19 +21,13 @@ export default function SitePrefsBanner() {
 
   const accept = () => {
     try { 
-      console.log('🍪 Cookie consent accepted');
       setCookieConsent('accepted');
-      updateConsent(true); // Update Google Analytics consent
-      
-      // Immediately track current page
-      console.log('📊 Triggering immediate tracking after consent');
+      updateConsent(true);
       trackPageView(location.pathname, document.title);
       
-      // Immediately track session to custom backend
       const params = new URLSearchParams(window.location.search);
       const sourceHint = params.get('src') || params.get('source') || params.get('utm_source');
       
-      console.log('📤 Sending custom tracking event to /api/track');
       apiFetch(`${API_BASE}/api/track`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -42,12 +36,8 @@ export default function SitePrefsBanner() {
           path: location.pathname,
           source: sourceHint || undefined
         })
-      })
-      .then(() => console.log('✅ Custom tracking successful'))
-      .catch((err) => console.error('❌ Custom tracking failed:', err));
-    } catch (e) {
-      console.error('❌ Error in accept handler:', e);
-    }
+      }).catch(() => {});
+    } catch (_) {}
     setVisible(false);
   };
 

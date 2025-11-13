@@ -146,6 +146,7 @@ async function setupRoutes() {
   const { default: subscribeRouter } = await import("./routes/subscribe.js");
   const { default: adminRouter } = await import("./routes/admin/index.js");
   const { default: trackRouter } = await import("./routes/track.js");
+  const { default: blogTrackingRouter } = await import("./routes/blog-tracking.js");
   const { default: healthRouter } = await import("./routes/health.js");
   const { default: errorsRouter } = await import("./routes/errors.js");
   const { default: blogRouter } = await import("./routes/blog.js");
@@ -162,6 +163,8 @@ async function setupRoutes() {
   app.use("/api/blog", globalLimiter, blogRouter);
   app.use("/api/subscribe", subscribeLimiter, subscribeRouter);
   app.use("/api/admin", adminLimiter, adminRouter);
+  // Blog tracking must come BEFORE general tracking (more specific routes first)
+  app.use("/api/track/blog", trackingLimiter, blogTrackingRouter);
   app.use("/api/track", trackingLimiter, trackRouter);
 }
 

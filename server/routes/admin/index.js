@@ -8,6 +8,7 @@ import blogRouter from "./blog.js";
 import tagsRouter from "./tags.js";
 import nichesRouter from "./niches.js";
 import performanceRouter from "./performance.js";
+import blogAnalyticsRouter from "./blog-analytics.js";
 
 const router = express.Router();
 
@@ -20,6 +21,7 @@ router.use('/users', usersRouter);
 router.use('/traffic', trafficRouter);
 router.use('/sessions', sessionsRouter);
 router.use('/blog', blogRouter);
+router.use('/blog-analytics', blogAnalyticsRouter);
 router.use('/tags', tagsRouter);
 router.use('/niches', nichesRouter);
 router.use('/performance', performanceRouter);

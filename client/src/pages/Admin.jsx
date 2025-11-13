@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { BarChart3, Users as UsersIcon, FileText, Settings as SettingsIcon, Activity, Menu, X, Database, Folder } from 'lucide-react';
+import { BarChart3, Users as UsersIcon, FileText, Settings as SettingsIcon, Activity, Menu, X, Database, Folder, TrendingUp } from 'lucide-react';
 import { apiClient, endpoints, auth as apiAuth } from '../api';
 import AdminSettings from '../components/AdminSettings';
 import AdminOverview from '../components/AdminOverview';
@@ -10,6 +10,8 @@ import AdminSessions from '../components/AdminSessions';
 import AdminPerformance from '../components/AdminPerformance';
 import AdminNiches from '../components/AdminNiches';
 import ContentEditorPage from './ContentEditorPage';
+import BlogAnalytics from './BlogAnalytics';
+import SinglePostAnalytics from './SinglePostAnalytics';
 
 export default function Admin() {
   const [user, setUser] = useState(null);
@@ -42,6 +44,7 @@ export default function Admin() {
       { key: 'sessions', label: 'Sessions', icon: Activity, path: '/admin/sessions' },
       { key: 'users', label: 'Users', icon: UsersIcon, path: '/admin/users' },
       { key: 'content', label: 'Content', icon: FileText, path: '/admin/content' },
+      { key: 'blog-analytics', label: 'Blog Analytics', icon: TrendingUp, path: '/admin/blog-analytics' },
       { key: 'niches', label: 'Niches', icon: Folder, path: '/admin/niches' },
       { key: 'performance', label: 'Performance', icon: Database, path: '/admin/performance' },
       { key: 'settings', label: 'Settings', icon: SettingsIcon, path: '/admin/settings' }
@@ -150,6 +153,8 @@ export default function Admin() {
           <Route path="content" element={<AdminContent />} />
           <Route path="content/new" element={<ContentEditorPage />} />
           <Route path="content/edit" element={<ContentEditorPage />} />
+          <Route path="blog-analytics" element={<BlogAnalytics />} />
+          <Route path="blog-analytics/:postId" element={<SinglePostAnalytics />} />
           <Route path="niches" element={<AdminNiches />} />
           <Route path="performance" element={<AdminPerformance />} />
           <Route path="settings" element={<AdminSettings />} />
