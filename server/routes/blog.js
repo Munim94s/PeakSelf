@@ -76,6 +76,11 @@ router.get('/niches/:slug', async (req, res) => {
   try {
     const { slug } = req.params;
     const { limit = 10, offset = 0 } = req.query;
+
+    const rawLimit = parseInt(limit, 10);
+    const rawOffset = parseInt(offset, 10);
+    const safeLimit = Math.max(1, Math.min(50, Number.isNaN(rawLimit) ? 10 : rawLimit));
+    const safeOffset = Math.max(0, Number.isNaN(rawOffset) ? 0 : rawOffset);
     
     // Get niche details
     const nicheResult = await pool.query(
@@ -108,7 +113,7 @@ router.get('/niches/:slug', async (req, res) => {
       GROUP BY bp.id, u.name
       ORDER BY bp.published_at DESC
       LIMIT $2 OFFSET $3
-    `, [niche.id, parseInt(limit), parseInt(offset)]);
+    `, [niche.id, safeLimit, safeOffset]);
     
     res.json({ 
       niche,
@@ -124,6 +129,11 @@ router.get('/niches/:slug', async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     const { limit = 10, offset = 0, tag } = req.query;
+
+    const rawLimit = parseInt(limit, 10);
+    const rawOffset = parseInt(offset, 10);
+    const safeLimit = Math.max(1, Math.min(50, Number.isNaN(rawLimit) ? 10 : rawLimit));
+    const safeOffset = Math.max(0, Number.isNaN(rawOffset) ? 0 : rawOffset);
     
     let query = `
       SELECT bp.id, bp.title, bp.excerpt, bp.slug, bp.content, bp.image,
@@ -164,13 +174,69 @@ router.get('/', async (req, res) => {
       LIMIT $${params.length + 1} OFFSET $${params.length + 2}
     `;
     
-    params.push(parseInt(limit), parseInt(offset));
+    params.push(safeLimit, safeOffset);
     
     const result = await pool.query(query, params);
     res.json({ posts: result.rows });
   } catch (error) {
     logger.error('Error fetching blog posts:', error);
     res.status(500).json({ error: 'Failed to fetch blog posts' });
+  }
+});
+
+// GET /api/blog/similar/:postId - Get similar posts based on tags
+router.get('/similar/:postId', async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const { limit = 6 } = req.query;
+
+    const rawLimit = parseInt(limit, 10);
+    const safeLimit = Math.max(1, Math.min(20, Number.isNaN(rawLimit) ? 6 : rawLimit));
+    
+    // Get tags for the current post
+    const tagsResult = await pool.query(
+      'SELECT tag_id FROM content_tags WHERE content_id = $1',
+      [postId]
+    );
+    
+    if (tagsResult.rows.length === 0) {
+      return res.json({ posts: [] });
+    }
+    
+    const tagIds = tagsResult.rows.map(row => row.tag_id);
+    
+    // Find posts with similar tags, ordered by number of matching tags
+    const result = await pool.query(`
+      SELECT bp.id, bp.title, bp.excerpt, bp.slug, bp.image,
+        bp.created_at, bp.published_at,
+        u.name as author,
+        COALESCE(
+          json_agg(
+            DISTINCT json_build_object('id', t.id, 'name', t.name, 'slug', t.slug, 'color', t.color)
+          ) FILTER (WHERE t.id IS NOT NULL),
+          '[]'
+        ) as tags,
+        COUNT(DISTINCT ct.tag_id) as matching_tags
+      FROM blog_posts bp
+      LEFT JOIN users u ON bp.author_id = u.id
+      LEFT JOIN content_tags ct ON bp.id = ct.content_id
+      LEFT JOIN tags t ON ct.tag_id = t.id
+      WHERE bp.status = 'published' 
+        AND bp.id != $1
+        AND bp.id IN (
+          SELECT DISTINCT content_id 
+          FROM content_tags 
+          WHERE tag_id = ANY($2)
+        )
+      GROUP BY bp.id, u.name
+      ORDER BY matching_tags DESC, bp.published_at DESC
+      LIMIT $3
+    `, [postId, tagIds, safeLimit]);
+    
+    res.json({ posts: result.rows });
+  } catch (error) {
+    logger.error('Error fetching similar posts:', error);
+    res.status(500).json({ error: 'Failed to fetch similar posts' });
   }
 });
 

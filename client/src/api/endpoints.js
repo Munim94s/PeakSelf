@@ -36,6 +36,7 @@ export const newsletter = {
 export const blog = {
   list: `${API}/blog`,
   bySlug: (slug) => `${API}/blog/${slug}`,
+  similar: (postId) => `${API}/blog/similar/${postId}`,
   create: `${API}/admin/blog`,
   update: (id) => `${API}/admin/blog/${id}`,
   delete: (id) => `${API}/admin/blog/${id}`,

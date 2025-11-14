@@ -82,11 +82,18 @@ const PostCard = ({ post, featured = false, showMeta = true }) => {
 
         <div className="post-card-footer">
           <div className="post-card-tags">
-            {post.tags?.slice(0, 3).map((tag, index) => (
-              <span key={tag.id || index} className="post-card-tag">
-                #{typeof tag === 'string' ? tag : tag.name}
-              </span>
-            ))}
+            {post.tags?.slice(0, 3).map((tag, index) => {
+              const tagSlug = typeof tag === 'string' ? tag.toLowerCase().replace(/\s+/g, '-') : tag.slug;
+              return (
+                <Link 
+                  key={tag.id || index} 
+                  to={`/blog/tags/${tagSlug}`}
+                  className="post-card-tag"
+                >
+                  #{typeof tag === 'string' ? tag : tag.name}
+                </Link>
+              );
+            })}
           </div>
           
           <Link to={`/blog/${post.slug}`} className="post-card-read-more">

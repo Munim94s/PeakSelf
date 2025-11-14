@@ -10,6 +10,8 @@ const Post = () => {
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isLiked, setIsLiked] = useState(false);
+  const [showCopied, setShowCopied] = useState(false);
   
   // Blog engagement tracking (handles views, scroll, time automatically)
   const tracking = useBlogEngagementTracking(post?.id, !!post);
@@ -127,8 +129,9 @@ const Post = () => {
           {post.tags && post.tags.length > 0 && (
             <div className="flex flex-wrap gap-3 mb-6">
               {post.tags.map((tag) => (
-                <span
+                <Link
                   key={tag.id}
+                  to={`/blog/tags/${tag.slug}`}
                   className="post-tag"
                   style={{
                     backgroundColor: tag.color,
@@ -136,33 +139,54 @@ const Post = () => {
                   }}
                 >
                   {tag.name}
-                </span>
+                </Link>
               ))}
             </div>
           )}
           
           <div className="flex items-center space-x-6">
             <button 
-              className="flex items-center space-x-2 text-gray-600 hover:text-red-500 transition-colors duration-200"
-              onClick={() => tracking.trackLike()}
+              className={`flex items-center space-x-2 transition-all duration-200 ${isLiked ? 'text-red-500' : 'text-gray-600 hover:text-red-500'}`}
+              onClick={() => {
+                setIsLiked(!isLiked);
+                tracking.trackLike();
+              }}
             >
-              <Heart className="w-5 h-5" />
+              <Heart className={`w-5 h-5 ${isLiked ? 'fill-current like-animation' : ''}`} />
               <span className="text-sm font-medium">Like</span>
             </button>
             <button 
-              className="flex items-center space-x-2 text-gray-600 hover:text-blue-500 transition-colors duration-200"
-              onClick={() => {
+              className="flex items-center space-x-2 text-gray-600 hover:text-blue-500 transition-colors duration-200 relative"
+              onClick={async () => {
                 tracking.trackShare('native');
                 if (navigator.share) {
-                  navigator.share({
-                    title: post.title,
-                    url: window.location.href
-                  }).catch(() => {});
+                  try {
+                    await navigator.share({
+                      title: post.title,
+                      url: window.location.href
+                    });
+                  } catch (err) {
+                    // User cancelled or error - ignore
+                  }
+                } else {
+                  // Fallback to clipboard
+                  try {
+                    await navigator.clipboard.writeText(window.location.href);
+                    setShowCopied(true);
+                    setTimeout(() => setShowCopied(false), 2000);
+                  } catch (err) {
+                    console.error('Failed to copy:', err);
+                  }
                 }
               }}
             >
               <Share2 className="w-5 h-5" />
               <span className="text-sm font-medium">Share</span>
+              {showCopied && (
+                <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
+                  Link copied!
+                </span>
+              )}
             </button>
           </div>
         </div>

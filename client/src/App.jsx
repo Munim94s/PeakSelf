@@ -14,6 +14,7 @@ const Home = lazy(() => import('./pages/Home'));
 const Blog = lazy(() => import('./pages/Blog'));
 const Post = lazy(() => import('./pages/Post'));
 const NichePage = lazy(() => import('./pages/NichePage'));
+const TagPosts = lazy(() => import('./pages/TagPosts'));
 const About = lazy(() => import('./pages/About'));
 const Contact = lazy(() => import('./pages/Contact'));
 const Login = lazy(() => import('./pages/Login'));
@@ -43,7 +44,8 @@ function App() {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/blog" element={<Blog />} />
-              <Route path="/blog/:slug" element={<Post />} />
+<Route path="/blog/:slug" element={<Post />} />
+              <Route path="/blog/tags/:tagSlugs" element={<TagPosts />} />
               <Route path="/:nicheSlug/blog" element={<Blog />} />
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />

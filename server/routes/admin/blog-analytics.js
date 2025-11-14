@@ -26,6 +26,7 @@ router.get('/', async (req, res) => {
         SUM(total_views) as total_views,
         AVG(engagement_rate) as avg_engagement_rate,
         SUM(total_shares) as total_shares,
+        SUM(likes_count) as total_likes,
         SUM(newsletter_signups) as total_signups,
         AVG(avg_time_on_page) as avg_time_on_page
       FROM blog_post_analytics
@@ -79,12 +80,13 @@ router.get('/comparison', async (req, res) => {
     
     const validSortFields = [
       'engagement_score', 'total_views', 'engagement_rate', 
-      'avg_time_on_page', 'total_shares', 'avg_scroll_depth', 'title'
+      'avg_time_on_page', 'total_shares', 'likes_count', 'avg_scroll_depth', 'title'
     ];
     
     const sortField = validSortFields.includes(sort_by) ? sort_by : 'engagement_score';
     const sortOrder = order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
-    const pageLimit = parseInt(limit, 10) || 20;
+    const rawLimit = parseInt(limit, 10);
+    const pageLimit = Math.max(1, Math.min(100, Number.isNaN(rawLimit) ? 20 : rawLimit));
     const currentPage = parseInt(page, 10) || 1;
     const offset = (currentPage - 1) * pageLimit;
     
@@ -116,6 +118,7 @@ router.get('/comparison', async (req, res) => {
         bpa.avg_time_on_page,
         bpa.avg_scroll_depth,
         bpa.total_shares,
+        bpa.likes_count,
         bpa.engagement_score,
         bpa.engagement_rate,
         bpa.cta_clicks,
@@ -261,6 +264,89 @@ router.get('/leaderboard', async (req, res) => {
   } catch (err) {
     logger.error('Error fetching leaderboard:', err);
     return errorResponse(res, 'Failed to fetch leaderboard', 500);
+  }
+});
+
+// GET /api/admin/blog-analytics/top-posts-timeline
+// Get timeline data for top performing posts
+router.get('/top-posts-timeline', async (req, res) => {
+  try {
+    const { days = 30, limit = 5, metric = 'views' } = req.query;
+    
+    const daysInt = Math.max(1, Math.min(90, parseInt(days)));
+    const limitInt = Math.max(1, Math.min(10, parseInt(limit)));
+    const validMetric = ['views', 'engagement'].includes(metric) ? metric : 'views';
+    
+    // Get top posts based on selected metric
+    const topPostsQuery = validMetric === 'views' 
+      ? `
+        SELECT post_id, SUM(views) as total
+        FROM blog_post_daily_stats
+        WHERE stat_date >= CURRENT_DATE - ($1::int * INTERVAL '1 day')
+        GROUP BY post_id
+        ORDER BY total DESC
+        LIMIT $2
+      `
+      : `
+        SELECT post_id, AVG(engagement_rate) as total
+        FROM blog_post_daily_stats
+        WHERE stat_date >= CURRENT_DATE - ($1::int * INTERVAL '1 day')
+          AND engagement_rate IS NOT NULL
+        GROUP BY post_id
+        ORDER BY total DESC
+        LIMIT $2
+      `;
+    
+    const topPosts = await pool.query(topPostsQuery, [daysInt, limitInt]);
+    const postIds = topPosts.rows.map(r => r.post_id);
+    
+    if (postIds.length === 0) {
+      return success(res, { timeline: [], posts: [] });
+    }
+    
+    // Get daily data for these posts
+    const timelineResult = await pool.query(`
+      SELECT 
+        bpds.stat_date,
+        bp.id,
+        bp.title,
+        bp.slug,
+        bpds.views,
+        bpds.engagement_rate
+      FROM blog_post_daily_stats bpds
+      JOIN blog_posts bp ON bpds.post_id = bp.id
+      WHERE bpds.post_id = ANY($1::int[])
+        AND bpds.stat_date >= CURRENT_DATE - ($2::int * INTERVAL '1 day')
+      ORDER BY bpds.stat_date ASC, bp.title
+    `, [postIds, daysInt]);
+    
+    // Transform data for recharts
+    const dataByDate = {};
+    timelineResult.rows.forEach(row => {
+      const date = row.stat_date;
+      if (!dataByDate[date]) {
+        dataByDate[date] = { date };
+      }
+      dataByDate[date][row.title] = validMetric === 'views' ? row.views : row.engagement_rate;
+    });
+    
+    const timeline = Object.values(dataByDate);
+    
+    return success(res, { 
+      timeline,
+      posts: topPosts.rows.map((r, idx) => {
+        const post = timelineResult.rows.find(tr => tr.id === r.post_id);
+        return {
+          id: r.post_id,
+          title: post?.title || 'Unknown',
+          slug: post?.slug || '',
+          total: r.total
+        };
+      })
+    });
+  } catch (err) {
+    logger.error('Error fetching top posts timeline:', err);
+    return errorResponse(res, 'Failed to fetch top posts timeline', 500);
   }
 });
 
