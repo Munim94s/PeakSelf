@@ -12,7 +12,9 @@ const Blog = () => {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [searchTerm, setSearchTerm] = useState(''); // debounced term used for API/Fuse
+  const [searchResults, setSearchResults] = useState(null);
   const [niche, setNiche] = useState(null);
   const observerRef = useRef();
   const lastPostRef = useRef();
@@ -45,9 +47,9 @@ const Blog = () => {
     fetchPosts();
   }, [nicheSlug]);
 
-  // Infinite scroll
+  // Infinite scroll (disabled while searching)
   useEffect(() => {
-    if (loading || loadingMore || !hasMore || nicheSlug) return;
+    if (loading || loadingMore || !hasMore || nicheSlug || searchTerm) return;
 
     const observer = new IntersectionObserver((entries) => {
       if (entries[0].isIntersecting && hasMore) {
@@ -69,7 +71,7 @@ const Blog = () => {
   }, [loading, loadingMore, hasMore, posts, nicheSlug]);
 
   const loadMorePosts = async () => {
-    if (loadingMore || !hasMore) return;
+    if (loadingMore || !hasMore || searchTerm) return;
     
     try {
       setLoadingMore(true);
@@ -106,17 +108,69 @@ const Blog = () => {
 
   const filteredPosts = useMemo(() => {
     if (!searchTerm) return posts;
+
+    // When we have server-powered search results, prefer them
+    if (Array.isArray(searchResults)) return searchResults;
     
-    // Use Fuse.js for fuzzy search
+    // Fallback: Fuse.js fuzzy search on currently loaded posts
     const results = fuse.search(searchTerm);
     return results.map(result => result.item);
-  }, [posts, searchTerm, fuse]);
+  }, [posts, searchTerm, fuse, searchResults]);
 
   const handleSearch = useCallback((term) => {
-    setSearchTerm(term);
+    setSearchInput(term);
   }, []);
 
+  // Debounce search input before triggering API calls/Fuse
+  useEffect(() => {
+    const trimmed = searchInput.trim();
+
+    if (!trimmed) {
+      setSearchTerm('');
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      setSearchTerm(trimmed);
+    }, 400); // 400ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [searchInput]);
+
+  // Fetch search results from the API when debounced search term is set
+  useEffect(() => {
+    if (!searchTerm || searchTerm.length < 2) {
+      setSearchResults(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchSearchResults = async () => {
+      try {
+        const { data } = await apiClient.get(endpoints.blog.list, { limit: 50, offset: 0, search: searchTerm });
+        if (!cancelled) {
+          setSearchResults(data.posts || []);
+          // For search, we don't auto-load more via infinite scroll
+          setHasMore(false);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Failed to search posts:', err);
+          setSearchResults([]);
+        }
+      }
+    };
+
+    fetchSearchResults();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [searchTerm]);
+
   const handleClearFilters = useCallback(() => {
+    setSearchInput('');
     setSearchTerm('');
   }, []);
 

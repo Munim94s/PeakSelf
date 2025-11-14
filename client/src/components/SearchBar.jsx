@@ -10,12 +10,11 @@ const SearchBar = ({ onSearch, placeholder = "Search articles..." }) => {
   // Memoize event handlers to prevent unnecessary re-renders
   const handleSubmit = useCallback((e) => {
     e.preventDefault();
-    const results = onSearch(searchTerm);
-    
-    // Track search event
+    onSearch(searchTerm);
+
+    // Track search event (results count handled in analytics or ignored)
     if (searchTerm && hasConsent()) {
-      const resultsCount = Array.isArray(results) ? results.length : 0;
-      trackSearch(searchTerm, resultsCount);
+      trackSearch(searchTerm, undefined);
     }
   }, [searchTerm, onSearch]);
 
@@ -33,7 +32,11 @@ const SearchBar = ({ onSearch, placeholder = "Search articles..." }) => {
         <input
           type="text"
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) => {
+            const value = e.target.value;
+            setSearchTerm(value);
+            onSearch(value);
+          }}
           className="search-bar-input"
           placeholder={placeholder}
         />

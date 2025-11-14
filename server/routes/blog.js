@@ -128,8 +128,8 @@ router.get('/niches/:slug', async (req, res) => {
 // GET /api/blog - Get all published blog posts
 router.get('/', async (req, res) => {
   try {
-    const { limit = 10, offset = 0, tag } = req.query;
-
+    const { limit = 10, offset = 0, tag, search } = req.query;
+    
     const rawLimit = parseInt(limit, 10);
     const rawOffset = parseInt(offset, 10);
     const safeLimit = Math.max(1, Math.min(50, Number.isNaN(rawLimit) ? 10 : rawLimit));
@@ -166,6 +166,24 @@ router.get('/', async (req, res) => {
         WHERE t2.slug = $${params.length + 1}
       )`;
       params.push(tag);
+    }
+
+    // Full-text style search across title, excerpt, and tag names
+    if (search && typeof search === 'string' && search.trim() !== '') {
+      const term = `%${search.toLowerCase()}%`;
+      params.push(term);
+      const idx = params.length;
+      query += ` AND (
+        LOWER(bp.title) LIKE $${idx}
+        OR LOWER(bp.excerpt) LIKE $${idx}
+        OR EXISTS (
+          SELECT 1
+          FROM content_tags ct3
+          JOIN tags t3 ON ct3.tag_id = t3.id
+          WHERE ct3.content_id = bp.id
+            AND LOWER(t3.name) LIKE $${idx}
+        )
+      )`;
     }
     
     query += `
