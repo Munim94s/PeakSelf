@@ -205,7 +205,7 @@ router.get('/', async (req, res) => {
 // GET /api/blog/similar/:postId - Get similar posts based on tags
 router.get('/similar/:postId', async (req, res) => {
   try {
-    const { postId } = req.params;
+    const postId = parseInt(req.params.postId, 10);
     const { limit = 6 } = req.query;
 
     const rawLimit = parseInt(limit, 10);
@@ -217,41 +217,78 @@ router.get('/similar/:postId', async (req, res) => {
       [postId]
     );
     
-    if (tagsResult.rows.length === 0) {
-      return res.json({ posts: [] });
-    }
-    
     const tagIds = tagsResult.rows.map(row => row.tag_id);
     
-    // Find posts with similar tags, ordered by number of matching tags
-    const result = await pool.query(`
-      SELECT bp.id, bp.title, bp.excerpt, bp.slug, bp.image,
-        bp.created_at, bp.published_at,
-        u.name as author,
-        COALESCE(
-          json_agg(
-            DISTINCT json_build_object('id', t.id, 'name', t.name, 'slug', t.slug, 'color', t.color)
-          ) FILTER (WHERE t.id IS NOT NULL),
-          '[]'
-        ) as tags,
-        COUNT(DISTINCT ct.tag_id) as matching_tags
-      FROM blog_posts bp
-      LEFT JOIN users u ON bp.author_id = u.id
-      LEFT JOIN content_tags ct ON bp.id = ct.content_id
-      LEFT JOIN tags t ON ct.tag_id = t.id
-      WHERE bp.status = 'published' 
-        AND bp.id != $1
-        AND bp.id IN (
-          SELECT DISTINCT content_id 
-          FROM content_tags 
-          WHERE tag_id = ANY($2)
-        )
-      GROUP BY bp.id, u.name
-      ORDER BY matching_tags DESC, bp.published_at DESC
-      LIMIT $3
-    `, [postId, tagIds, safeLimit]);
+    let posts = [];
     
-    res.json({ posts: result.rows });
+    // If the post has tags, find posts with similar tags
+    if (tagIds.length > 0) {
+      const similarResult = await pool.query(`
+        SELECT bp.id, bp.title, bp.excerpt, bp.slug, bp.image,
+          bp.created_at, bp.published_at,
+          u.name as author,
+          COALESCE(
+            json_agg(
+              json_build_object('id', t.id, 'name', t.name, 'slug', t.slug, 'color', t.color)
+            ) FILTER (WHERE t.id IS NOT NULL),
+            '[]'
+          ) as tags,
+          COUNT(DISTINCT ct.tag_id) as matching_tags
+        FROM blog_posts bp
+        LEFT JOIN users u ON bp.author_id = u.id
+        LEFT JOIN content_tags ct ON bp.id = ct.content_id
+        LEFT JOIN tags t ON ct.tag_id = t.id
+        WHERE bp.status = 'published' 
+          AND bp.id != $1
+          AND bp.id IN (
+            SELECT DISTINCT content_id 
+            FROM content_tags 
+            WHERE tag_id = ANY($2)
+          )
+        GROUP BY bp.id, u.name
+        ORDER BY matching_tags DESC, bp.published_at DESC
+        LIMIT $3
+      `, [postId, tagIds, safeLimit]);
+      
+      posts = similarResult.rows;
+    }
+    
+    // If we don't have enough posts, fill with top performing ones
+    if (posts.length < safeLimit) {
+      const remainingLimit = safeLimit - posts.length;
+      const excludeIds = [postId, ...posts.map(p => p.id)];
+      
+      // Build dynamic query with placeholders for each excluded ID
+      const placeholders = excludeIds.map((_, i) => `$${i + 1}`).join(',');
+      
+      // Get top performing posts (by views, or recent if no analytics)
+      const topPostsResult = await pool.query(`
+        SELECT bp.id, bp.title, bp.excerpt, bp.slug, bp.image,
+          bp.created_at, bp.published_at,
+          u.name as author,
+          COALESCE(
+            json_agg(
+              json_build_object('id', t.id, 'name', t.name, 'slug', t.slug, 'color', t.color)
+            ) FILTER (WHERE t.id IS NOT NULL),
+            '[]'
+          ) as tags,
+          COALESCE(bpa.total_views, 0) as total_views
+        FROM blog_posts bp
+        LEFT JOIN users u ON bp.author_id = u.id
+        LEFT JOIN content_tags ct ON bp.id = ct.content_id
+        LEFT JOIN tags t ON ct.tag_id = t.id
+        LEFT JOIN blog_post_analytics bpa ON bp.id = bpa.post_id
+        WHERE bp.status = 'published'
+          AND bp.id NOT IN (${placeholders})
+        GROUP BY bp.id, u.name, bpa.total_views
+        ORDER BY total_views DESC, bp.published_at DESC
+        LIMIT $${excludeIds.length + 1}
+      `, [...excludeIds, remainingLimit]);
+      
+      posts = [...posts, ...topPostsResult.rows];
+    }
+    
+    res.json({ posts });
   } catch (error) {
     logger.error('Error fetching similar posts:', error);
     res.status(500).json({ error: 'Failed to fetch similar posts' });

@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { Calendar, Clock, User, ArrowLeft, Share2, Heart } from 'lucide-react';
 import { apiClient, endpoints } from '../api';
 import { useBlogEngagementTracking } from '../hooks/useBlogEngagementTracking';
+import SimilarPosts from '../components/SimilarPosts';
 import './Post.css';
 
 const Post = () => {
@@ -228,6 +229,9 @@ const Post = () => {
           </div>
         )}
       </article>
+
+      {/* Similar Posts - Full Width */}
+      <SimilarPosts postId={post.id} />
     </div>
   );
 };
