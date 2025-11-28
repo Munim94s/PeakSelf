@@ -4,6 +4,8 @@ import { Calendar, Clock, User, ArrowLeft, Share2, Heart } from 'lucide-react';
 import { apiClient, endpoints } from '../api';
 import { useBlogEngagementTracking } from '../hooks/useBlogEngagementTracking';
 import SimilarPosts from '../components/SimilarPosts';
+import SEOHead from '../components/SEOHead';
+import { truncateDescription, generateBlogPostSchema } from '../utils/seo';
 import './Post.css';
 
 const Post = () => {
@@ -13,7 +15,7 @@ const Post = () => {
   const [error, setError] = useState(null);
   const [isLiked, setIsLiked] = useState(false);
   const [showCopied, setShowCopied] = useState(false);
-  
+
   // Blog engagement tracking (handles views, scroll, time automatically)
   const tracking = useBlogEngagementTracking(post?.id, !!post);
 
@@ -77,6 +79,20 @@ const Post = () => {
 
   return (
     <div className="min-h-screen bg-white">
+      <SEOHead
+        title={post.title}
+        description={post.excerpt || truncateDescription(post.content)}
+        image={post.image}
+        url={`/blog/${post.slug}`}
+        type="article"
+        article={{
+          publishedTime: post.published_at || post.created_at,
+          modifiedTime: post.updated_at,
+          author: post.author,
+          tags: post.tags ? post.tags.map(t => t.name) : [],
+        }}
+        structuredData={generateBlogPostSchema(post)}
+      />
       {/* Back Button */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-6">
         <Link
@@ -144,9 +160,9 @@ const Post = () => {
               ))}
             </div>
           )}
-          
+
           <div className="flex items-center space-x-6">
-            <button 
+            <button
               className={`flex items-center space-x-2 transition-all duration-200 ${isLiked ? 'text-red-500' : 'text-gray-600 hover:text-red-500'}`}
               onClick={() => {
                 setIsLiked(!isLiked);
@@ -156,7 +172,7 @@ const Post = () => {
               <Heart className={`w-5 h-5 ${isLiked ? 'fill-current like-animation' : ''}`} />
               <span className="text-sm font-medium">Like</span>
             </button>
-            <button 
+            <button
               className="flex items-center space-x-2 text-gray-600 hover:text-blue-500 transition-colors duration-200 relative"
               onClick={async () => {
                 tracking.trackShare('native');
@@ -199,8 +215,8 @@ const Post = () => {
               {post.excerpt}
             </div>
           )}
-          
-          <div 
+
+          <div
             className="post-content text-gray-800 leading-relaxed"
             dangerouslySetInnerHTML={{ __html: post.content }}
           />
@@ -220,8 +236,8 @@ const Post = () => {
                   {post.author}
                 </h3>
                 <p className="text-gray-600">
-                  Passionate writer and technology enthusiast with over 5 years of experience 
-                  in web development and digital innovation. Loves sharing knowledge and helping 
+                  Passionate writer and technology enthusiast with over 5 years of experience
+                  in web development and digital innovation. Loves sharing knowledge and helping
                   others grow in their careers.
                 </p>
               </div>

@@ -1,5 +1,6 @@
 import React, { lazy, Suspense, useEffect } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import Tracker from './components/Tracker';
@@ -27,24 +28,25 @@ const RateLimit = lazy(() => import('./pages/RateLimit'));
 function App() {
   const location = useLocation();
   const hideFooter = location.pathname.startsWith('/admin');
-  
+
   // Scroll to top on route change
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [location.pathname]);
-  
+
   return (
-    <ModalProvider>
-      <GlobalLoadingScreen />
-      <div className="app">
-        <Header />
-        <Tracker />
-        <EngagementTracker />
+    <HelmetProvider>
+      <ModalProvider>
+        <GlobalLoadingScreen />
+        <div className="app">
+          <Header />
+          <Tracker />
+          <EngagementTracker />
           <Suspense fallback={<BrandedLoadingScreen />}>
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/blog" element={<Blog />} />
-<Route path="/blog/:slug" element={<Post />} />
+              <Route path="/blog/:slug" element={<Post />} />
               <Route path="/blog/tags/:tagSlugs" element={<TagPosts />} />
               <Route path="/:nicheSlug/blog" element={<Blog />} />
               <Route path="/about" element={<About />} />
@@ -58,10 +60,11 @@ function App() {
               <Route path="/:nicheSlug" element={<NichePage />} />
             </Routes>
           </Suspense>
-        {!hideFooter && <Footer />}
-        {!hideFooter && <SitePrefsBanner />}
-      </div>
-    </ModalProvider>
+          {!hideFooter && <Footer />}
+          {!hideFooter && <SitePrefsBanner />}
+        </div>
+      </ModalProvider>
+    </HelmetProvider>
   );
 }
 

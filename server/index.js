@@ -23,12 +23,12 @@ const { default: logger } = await import("./utils/logger.js");
 
 // Import database pool, rate limiters, and CSRF after environment variables are loaded
 const { default: pool } = await import("./utils/db.js");
-const { 
-  authGeneralLimiter, 
-  subscribeLimiter, 
-  adminLimiter, 
+const {
+  authGeneralLimiter,
+  subscribeLimiter,
+  adminLimiter,
   trackingLimiter,
-  globalLimiter 
+  globalLimiter
 } = await import("./middleware/rateLimiter.js");
 const { generateCsrfToken, csrfProtection } = await import("./middleware/csrf.js");
 
@@ -150,13 +150,19 @@ async function setupRoutes() {
   const { default: healthRouter } = await import("./routes/health.js");
   const { default: errorsRouter } = await import("./routes/errors.js");
   const { default: blogRouter } = await import("./routes/blog.js");
-  
+  const { default: sitemapRouter } = await import("./routes/sitemap.js");
+  const { default: robotsRouter } = await import("./routes/robots.js");
+
+  // SEO routes (no rate limiting, no CSRF - for search engine bots)
+  app.use("/", sitemapRouter);
+  app.use("/", robotsRouter);
+
   // Health check endpoints (no rate limiting for monitoring)
   app.use("/api/health", healthRouter);
-  
+
   // Error logging endpoint (no rate limiting, no CSRF - errors need to be logged ASAP)
   app.use("/api/errors", errorsRouter);
-  
+
   // Apply specific rate limiters to routes
   // Note: auth routes have their own specific limiters (password, OAuth, general) applied per-endpoint
   app.use("/api/auth", authRouter);
@@ -172,10 +178,10 @@ async function setupRoutes() {
 setupRoutes().then(() => {
   // 404 handler for unmatched routes (must be after all routes)
   app.use(notFoundHandler);
-  
+
   // Global error handler (must be last middleware)
   app.use(errorHandler);
-  
+
   app.listen(PORT, () => {
     logger.info(`API listening on http://localhost:${PORT}`);
   });

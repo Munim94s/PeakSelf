@@ -5,6 +5,8 @@ import PostList from '../components/PostList';
 import PostCard from '../components/PostCard';
 import { apiClient, endpoints, response } from '../api';
 import { useModal } from '../contexts/ModalContext';
+import SEOHead from '../components/SEOHead';
+import { generateOrganizationSchema } from '../utils/seo';
 import './Home.css';
 
 const Home = () => {
@@ -19,7 +21,7 @@ const Home = () => {
         // Fetch niches with posts
         const { data: nichesData } = await apiClient.get(endpoints.niches.public + '?limit=3');
         setNiches(nichesData.niches || []);
-        
+
         // Fetch recent posts for the main section
         const { data: postsData } = await apiClient.get(endpoints.blog.list + '?limit=6');
         setRecentPosts(postsData.posts || postsData);
@@ -34,25 +36,32 @@ const Home = () => {
 
   return (
     <div className="home-container">
+      <SEOHead
+        title="PeakSelf - Analytics Platform"
+        description="Modern, self-hosted analytics and blog platform built with React, Express, and PostgreSQL. Complete control over your data with professional insights for career advancement and technology mastery."
+        url="/"
+        type="website"
+        structuredData={generateOrganizationSchema()}
+      />
       {/* Hero Section */}
       <section className="hero-section">
         <div className="container">
           <div className="py-20">
-            
+
             {/* Header Content */}
             <div className="text-center mb-16">
               {/* Main Title */}
               <h1 className="hero-title">
                 PEAKSELF
               </h1>
-              
+
               {/* Subtitle */}
               <p className="hero-subtitle">
-                Professional insights and strategic knowledge for career advancement, 
+                Professional insights and strategic knowledge for career advancement,
                 technology mastery, and executive-level productivity.
               </p>
             </div>
-            
+
             {/* Action Buttons */}
             <div className="hero-buttons-container">
               <Link to="/blog" className="hero-button-primary">
@@ -64,7 +73,7 @@ const Home = () => {
                 <ArrowRight className="hero-arrow" />
               </Link>
             </div>
-            
+
             {/* Trust Indicators */}
             <div className="trust-section">
               <div className="text-center mb-12">
@@ -75,7 +84,7 @@ const Home = () => {
                   Join thousands of professionals advancing their careers
                 </p>
               </div>
-              
+
               <div className="trust-stats-container">
                 <div className="text-center">
                   <div className="trust-stat-number">50+</div>
@@ -100,25 +109,25 @@ const Home = () => {
 
       {/* Niches Section */}
       {niches.length > 0 && (
-        <section className="niches-section" style={{padding: '4rem 0', background: '#fafafa'}}>
+        <section className="niches-section" style={{ padding: '4rem 0', background: '#fafafa' }}>
           <div className="container">
             {niches.map((niche, index) => (
-              <div key={niche.id} style={{marginBottom: index < niches.length - 1 ? '4rem' : '0'}}>
-                <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem'}}>
-                  <div style={{display: 'flex', alignItems: 'center', gap: '1rem'}}>
+              <div key={niche.id} style={{ marginBottom: index < niches.length - 1 ? '4rem' : '0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     {niche.logo_url && (
-                      <img src={niche.logo_url} alt={niche.name} style={{width: '40px', height: '40px', objectFit: 'contain'}} />
+                      <img src={niche.logo_url} alt={niche.name} style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
                     )}
-                    <h2 style={{fontSize: '2rem', fontWeight: '800', color: '#111', margin: 0}}>
+                    <h2 style={{ fontSize: '2rem', fontWeight: '800', color: '#111', margin: 0 }}>
                       {niche.logo_text || niche.name}
                     </h2>
                   </div>
-                  <Link to={`/${niche.slug}`} className="recent-button" style={{fontSize: '0.875rem'}}>
+                  <Link to={`/${niche.slug}`} className="recent-button" style={{ fontSize: '0.875rem' }}>
                     <span>View All</span>
                     <ArrowRight className="recent-button-arrow" />
                   </Link>
                 </div>
-                <div style={{height: '2px', background: 'linear-gradient(90deg, #111 0%, transparent 100%)', marginBottom: '2rem'}} />
+                <div style={{ height: '2px', background: 'linear-gradient(90deg, #111 0%, transparent 100%)', marginBottom: '2rem' }} />
                 {niche.posts.length > 0 ? (
                   <div className="recent-cards-container">
                     {niche.posts.map((post) => (
@@ -126,7 +135,7 @@ const Home = () => {
                     ))}
                   </div>
                 ) : (
-                  <p style={{textAlign: 'center', color: '#666', padding: '2rem'}}>No posts in this niche yet.</p>
+                  <p style={{ textAlign: 'center', color: '#666', padding: '2rem' }}>No posts in this niche yet.</p>
                 )}
               </div>
             ))}
@@ -138,7 +147,7 @@ const Home = () => {
       <section className="recent-section">
         <div className="container">
           <div className="recent-header">
-            <div style={{textAlign: 'center', marginBottom: '2rem'}}>
+            <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
               <h2 className="recent-title">
                 Latest Insights
               </h2>
@@ -151,20 +160,20 @@ const Home = () => {
               <ArrowRight className="recent-button-arrow" />
             </Link>
           </div>
-          
+
           <div className="recent-cards-container">
             {loading ? (
-              <p style={{textAlign: 'center', width: '100%'}}>Loading articles...</p>
+              <p style={{ textAlign: 'center', width: '100%' }}>Loading articles...</p>
             ) : recentPosts.length > 0 ? (
               recentPosts.map((post) => (
                 <PostCard key={post.id} post={post} showMeta={false} />
               ))
             ) : (
-              <p style={{textAlign: 'center', width: '100%'}}>No articles found.</p>
+              <p style={{ textAlign: 'center', width: '100%' }}>No articles found.</p>
             )}
           </div>
-          
-          <div className="text-center" style={{marginTop: '3rem'}}>
+
+          <div className="text-center" style={{ marginTop: '3rem' }}>
             <Link to="/blog" className="recent-button">
               <span>View All Articles</span>
               <ArrowRight className="recent-button-arrow" />
@@ -181,14 +190,14 @@ const Home = () => {
               Newsletter
             </span>
           </div>
-          
+
           <h2 className="newsletter-title">
             Stay Ahead of the Curve
           </h2>
           <p className="newsletter-description">
             Get exclusive insights, early access to articles, and weekly productivity tips delivered to your inbox
           </p>
-          
+
           <form className="newsletter-form" onSubmit={async (e) => {
             e.preventDefault();
             const email = e.target.email.value;
@@ -213,7 +222,7 @@ const Home = () => {
               <ArrowRight className="newsletter-button-arrow" />
             </button>
           </form>
-          
+
           <p className="newsletter-disclaimer">
             Join 10,000+ readers. Unsubscribe anytime.
           </p>
