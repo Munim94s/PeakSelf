@@ -12,7 +12,10 @@ const Header = () => {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [niches, setNiches] = useState([]);
   const [nichesMenuOpen, setNichesMenuOpen] = useState(false);
+  const [nichesMenuClosing, setNichesMenuClosing] = useState(false);
   const [currentNiche, setCurrentNiche] = useState(null);
+  const nichesCloseTimerRef = React.useRef(null);
+  const nichesRemoveTimerRef = React.useRef(null);
 
   // Fetch user function (reusable)
   const fetchMe = async () => {
@@ -174,19 +177,52 @@ const Header = () => {
             {niches.length > 0 && (
               <div 
                 className="header-niches-dropdown"
-                onMouseEnter={() => setNichesMenuOpen(true)}
-                onMouseLeave={() => setNichesMenuOpen(false)}
+                onMouseEnter={() => {
+                  // Clear any pending timers
+                  if (nichesCloseTimerRef.current) {
+                    clearTimeout(nichesCloseTimerRef.current);
+                    nichesCloseTimerRef.current = null;
+                  }
+                  if (nichesRemoveTimerRef.current) {
+                    clearTimeout(nichesRemoveTimerRef.current);
+                    nichesRemoveTimerRef.current = null;
+                  }
+                  setNichesMenuClosing(false);
+                  setNichesMenuOpen(true);
+                }}
+                onMouseLeave={() => {
+                  // Set a 0.75-second delay before starting close animation
+                  nichesCloseTimerRef.current = setTimeout(() => {
+                    setNichesMenuClosing(true);
+                    // Then remove from DOM after animation completes (0.2s)
+                    nichesRemoveTimerRef.current = setTimeout(() => {
+                      setNichesMenuOpen(false);
+                      setNichesMenuClosing(false);
+                    }, 200);
+                  }, 750);
+                }}
               >
                 <button className="header-nav-link" style={{background: 'transparent', border: 'none', cursor: 'pointer'}}>
                   Niches ▾
                 </button>
                 {nichesMenuOpen && (
-                  <div className="niches-dropdown-menu">
+                  <div className={`niches-dropdown-menu ${nichesMenuClosing ? 'closing' : ''}`}>
                     {niches.map(niche => (
                       <Link 
                         key={niche.id} 
                         to={`/${niche.slug}`} 
                         className="niches-dropdown-item"
+                        onClick={() => {
+                          // Immediately close dropdown when clicked
+                          if (nichesCloseTimerRef.current) {
+                            clearTimeout(nichesCloseTimerRef.current);
+                          }
+                          if (nichesRemoveTimerRef.current) {
+                            clearTimeout(nichesRemoveTimerRef.current);
+                          }
+                          setNichesMenuOpen(false);
+                          setNichesMenuClosing(false);
+                        }}
                       >
                         {niche.name}
                       </Link>

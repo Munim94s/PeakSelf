@@ -7,6 +7,35 @@ import { useModal } from '../contexts/ModalContext';
 import './Blog.css';
 import './Home.css';
 
+// Helper function to render article sections
+const ArticleSection = ({ sectionKey, title, description, posts, niche, background = null }) => {
+  const heroSections = niche.hero_sections || {};
+  const sectionIds = heroSections[sectionKey] || [];
+  const sectionPosts = sectionIds.length > 0
+    ? sectionIds.map(id => posts.find(p => p.id === id)).filter(Boolean)
+    : [];
+  
+  if (sectionPosts.length === 0) return null;
+  
+  return (
+    <section className="recent-section" style={background ? { background } : {}}>
+      <div className="container">
+        <div className="recent-header">
+          <div style={{textAlign: 'center', marginBottom: '2rem'}}>
+            <h2 className="recent-title">{title}</h2>
+            <p className="recent-description">{description}</p>
+          </div>
+        </div>
+        <div className="recent-cards-container">
+          {sectionPosts.map((post) => (
+            <PostCard key={post.id} post={post} />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
 const NichePage = () => {
   const modal = useModal();
   const { nicheSlug } = useParams();
@@ -133,7 +162,7 @@ const NichePage = () => {
         </div>
       </section>
 
-      {/* Articles Section */}
+      {/* Latest Articles Section */}
       <section id="articles" className="recent-section">
         <div className="container">
           <div className="recent-header">
@@ -142,16 +171,23 @@ const NichePage = () => {
                 Latest in {niche.display_name || niche.name}
               </h2>
               <p className="recent-description">
-                Stay ahead with our comprehensive coverage
+                Stay ahead with our newest articles and fresh insights
               </p>
             </div>
           </div>
           
           {posts.length > 0 ? (
             <div className="recent-cards-container">
-              {posts.map((post) => (
-                <PostCard key={post.id} post={post} />
-              ))}
+              {(() => {
+                const heroSections = niche.hero_sections || {};
+                const latestIds = heroSections.latest || [];
+                const latestPosts = latestIds.length > 0
+                  ? latestIds.map(id => posts.find(p => p.id === id)).filter(Boolean)
+                  : posts.slice(0, 6);
+                return latestPosts.map((post) => (
+                  <PostCard key={post.id} post={post} />
+                ));
+              })()}
             </div>
           ) : (
             <div style={{
@@ -176,6 +212,100 @@ const NichePage = () => {
           )}
         </div>
       </section>
+
+      <ArticleSection 
+        sectionKey="trending"
+        title={`Trending in ${niche.display_name || niche.name}`}
+        description="Most popular articles gaining traction right now"
+        posts={posts}
+        niche={niche}
+        background="#f8f9fa"
+      />
+
+      <ArticleSection 
+        sectionKey="popular"
+        title={`Popular in ${niche.display_name || niche.name}`}
+        description="Most loved articles by our community"
+        posts={posts}
+        niche={niche}
+      />
+
+      <ArticleSection 
+        sectionKey="recommended"
+        title={`Recommended in ${niche.display_name || niche.name}`}
+        description="Curated picks to deepen your knowledge"
+        posts={posts}
+        niche={niche}
+        background="#f8f9fa"
+      />
+
+      <ArticleSection 
+        sectionKey="indepth"
+        title={`In-Depth ${niche.display_name || niche.name}`}
+        description="Deep dives and comprehensive tutorials"
+        posts={posts}
+        niche={niche}
+      />
+
+      <ArticleSection 
+        sectionKey="expert"
+        title={`Expert ${niche.display_name || niche.name}`}
+        description="Professional insights and advanced perspectives"
+        posts={posts}
+        niche={niche}
+        background="#f8f9fa"
+      />
+
+      <ArticleSection 
+        sectionKey="essential"
+        title={`Essential ${niche.display_name || niche.name}`}
+        description="Must-read articles every enthusiast should know"
+        posts={posts}
+        niche={niche}
+      />
+
+      <ArticleSection 
+        sectionKey="beginner"
+        title={`Beginner's ${niche.display_name || niche.name}`}
+        description="Perfect starting point for newcomers"
+        posts={posts}
+        niche={niche}
+        background="#f8f9fa"
+      />
+
+      <ArticleSection 
+        sectionKey="advanced"
+        title={`Advanced ${niche.display_name || niche.name}`}
+        description="For experienced practitioners and experts"
+        posts={posts}
+        niche={niche}
+      />
+
+      <ArticleSection 
+        sectionKey="tips"
+        title={`${niche.display_name || niche.name} Tips & Tricks`}
+        description="Practical tips to improve your skills"
+        posts={posts}
+        niche={niche}
+        background="#f8f9fa"
+      />
+
+      <ArticleSection 
+        sectionKey="practices"
+        title={`${niche.display_name || niche.name} Best Practices`}
+        description="Industry standards and proven methodologies"
+        posts={posts}
+        niche={niche}
+      />
+
+      <ArticleSection 
+        sectionKey="more"
+        title={`More ${niche.display_name || niche.name}`}
+        description="Additional insights and resources"
+        posts={posts}
+        niche={niche}
+        background="#f8f9fa"
+      />
 
       {/* CTA Section */}
       <section className="newsletter-section">

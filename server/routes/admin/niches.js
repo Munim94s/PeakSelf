@@ -52,7 +52,7 @@ router.get('/:id', async (req, res) => {
 // POST /api/admin/niches - Create new niche
 router.post('/', async (req, res) => {
   try {
-    const { name, display_name, logo_url, logo_text = 'Peakself', is_active = true, display_order, show_on_route = true } = req.body;
+    const { name, display_name, logo_url, logo_text = 'Peakself', is_active = true, display_order, show_on_route = true, hero_sections = {} } = req.body;
 
     if (!name) {
       return res.status(400).json({ error: 'Niche name is required' });
@@ -72,10 +72,10 @@ router.post('/', async (req, res) => {
     }
 
     const result = await pool.query(
-      `INSERT INTO niches (name, slug, display_name, logo_url, logo_text, is_active, display_order, show_on_route)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `INSERT INTO niches (name, slug, display_name, logo_url, logo_text, is_active, display_order, show_on_route, hero_sections)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
-      [name, slug, display_name || null, logo_url || null, logo_text, is_active, displayOrderValue, show_on_route]
+      [name, slug, display_name || null, logo_url || null, logo_text, is_active, displayOrderValue, show_on_route, JSON.stringify(hero_sections)]
     );
 
     res.status(201).json({ niche: result.rows[0] });
@@ -93,7 +93,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, display_name, logo_url, logo_text, is_active, display_order, show_on_route } = req.body;
+    const { name, display_name, logo_url, logo_text, is_active, display_order, show_on_route, hero_sections } = req.body;
 
     if (!name) {
       return res.status(400).json({ error: 'Niche name is required' });
@@ -115,6 +115,12 @@ router.put('/:id', async (req, res) => {
     if (show_on_route !== undefined && show_on_route !== null) {
       updates.push(`show_on_route = $${paramIndex}`);
       params.push(show_on_route);
+      paramIndex++;
+    }
+    
+    if (hero_sections !== undefined) {
+      updates.push(`hero_sections = $${paramIndex}`);
+      params.push(JSON.stringify(hero_sections));
       paramIndex++;
     }
     

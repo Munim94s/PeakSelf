@@ -202,6 +202,28 @@ header {
   position: relative;
 }
 
+@keyframes dropdownSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes dropdownSlideUp {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
 .niches-dropdown-menu {
   position: absolute;
   top: calc(100% + 10px);
@@ -213,6 +235,14 @@ header {
   box-shadow: 0 20px 30px -15px rgba(0,0,0,0.25);
   padding: 8px;
   z-index: 100;
+  animation: dropdownSlideDown 0.2s ease-out;
+  animation-fill-mode: both;
+  transform-origin: top center;
+}
+
+.niches-dropdown-menu.closing {
+  animation: dropdownSlideUp 0.2s ease-in;
+  animation-fill-mode: both;
 }
 
 .niches-dropdown-item {
@@ -222,12 +252,31 @@ header {
   text-decoration: none;
   color: #000000;
   font-weight: 600;
-  transition: background 0.2s ease, color 0.2s ease;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
 }
 
 .niches-dropdown-item:hover {
   background: #000000;
   color: #ffffff;
+  transform: translateX(4px);
+}
+
+.niches-dropdown-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 3px;
+  background: #000000;
+  transform: scaleY(0);
+  transition: transform 0.2s ease;
+}
+
+.niches-dropdown-item:hover::before {
+  transform: scaleY(1);
 }
 
 /* Mobile niches */

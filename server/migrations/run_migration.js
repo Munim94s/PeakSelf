@@ -22,34 +22,28 @@ async function runMigration() {
   let client;
   
   try {
+    // Get migration name from command line argument
+    const migrationName = process.argv[2] || 'create_niches';
+    const migrationFile = `./${migrationName}.js`;
+    
     console.log('🔄 Connecting to database...');
     client = await pool.connect();
     console.log('✅ Connected to database\n');
     
-    // Import and run the niches migration
-    console.log('🔄 Running niches migration...');
-    console.log('   Creating niches table and adding niche_id to blog_posts...');
+    // Import and run the specified migration
+    console.log(`🔄 Running ${migrationName} migration...`);
     
-    const { up } = await import('./create_niches.js');
+    const { up } = await import(migrationFile);
     await up();
     
     console.log('✅ Migration completed successfully!\n');
     
-    // Verify tables were created/updated
+    // Verify niches table
     const checkNichesTable = await client.query(`
       SELECT EXISTS (
         SELECT FROM information_schema.tables 
         WHERE table_schema = 'public' 
         AND table_name = 'niches'
-      );
-    `);
-    
-    const checkNicheColumn = await client.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.columns 
-        WHERE table_schema = 'public' 
-        AND table_name = 'blog_posts'
-        AND column_name = 'niche_id'
       );
     `);
     
@@ -68,20 +62,9 @@ async function runMigration() {
       columns.rows.forEach(col => {
         console.log(`   - ${col.column_name}: ${col.data_type}`);
       });
-    } else {
-      console.error('❌ Error: Niches table was not created');
-      process.exit(1);
     }
     
-    if (checkNicheColumn.rows[0].exists) {
-      console.log('\n✅ Verified: niche_id column added to blog_posts');
-    } else {
-      console.error('❌ Error: niche_id column was not added to blog_posts');
-      process.exit(1);
-    }
-    
-    console.log('\n🎉 All done! Niches feature is now available.');
-    console.log('   You can now create niches in the admin panel.\n');
+    console.log('\n🎉 Migration complete!');
     
   } catch (error) {
     console.error('❌ Migration failed:', error.message);
