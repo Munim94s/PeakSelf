@@ -37,9 +37,9 @@ export default function RateLimit() {
         </div>
 
         <h1 className="rate-limit-title">Whoa there, speedy!</h1>
-        
+
         <p className="rate-limit-message">
-          Looks like you've been clicking a bit too fast for our servers to keep up! 
+          Looks like you've been clicking a bit too fast for our servers to keep up!
           Take a breather, grab a coffee , and we'll be ready for you in:
         </p>
 
@@ -69,7 +69,7 @@ export default function RateLimit() {
             <h3>In the meantime...</h3>
             <ul>
               <li>Check out our <Link to="/blog">latest blog posts</Link></li>
-              <li>Learn more <Link to="/about">about PeakSelf</Link></li>
+              <li>Learn more <Link to="/about">about Peakium</Link></li>
               <li>Stretch your legs and hydrate!</li>
             </ul>
           </div>
@@ -77,7 +77,7 @@ export default function RateLimit() {
 
         <div className="rate-limit-footer">
           <p>
-            This limit helps keep PeakSelf secure for everyone. 
+            This limit helps keep Peakium secure for everyone.
             Thanks for your patience!
           </p>
         </div>

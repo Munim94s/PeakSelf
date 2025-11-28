@@ -9,10 +9,10 @@ const About = () => {
       <section className="about-hero">
         <div className="about-hero-content">
           <h1 className="about-hero-title">
-            About PeakSelf
+            About Peakium
           </h1>
           <p className="about-hero-subtitle">
-            We're passionate about sharing knowledge, insights, and experiences 
+            We're passionate about sharing knowledge, insights, and experiences
             that help individuals and communities reach their peak potential.
           </p>
         </div>
@@ -26,8 +26,8 @@ const About = () => {
               Our Mission
             </h2>
             <p className="about-section-subtitle">
-              To create a platform where knowledge meets inspiration, and where 
-              every reader can discover tools, insights, and stories that propel 
+              To create a platform where knowledge meets inspiration, and where
+              every reader can discover tools, insights, and stories that propel
               them toward their personal and professional goals.
             </p>
           </div>
@@ -42,7 +42,7 @@ const About = () => {
                 Share stories and insights that spark new ideas and motivate positive change.
               </p>
             </div>
-            
+
             <div className="about-mission-item">
               <div className="about-mission-icon educate">
                 <Target />
@@ -52,7 +52,7 @@ const About = () => {
                 Provide practical knowledge and actionable advice across diverse topics.
               </p>
             </div>
-            
+
             <div className="about-mission-item">
               <div className="about-mission-icon connect">
                 <Heart />
@@ -76,23 +76,23 @@ const About = () => {
               </h2>
               <div className="about-story-text">
                 <p>
-                  PeakSelf was born from a simple belief: everyone has the potential 
-                  to achieve extraordinary things when they have access to the right 
+                  Peakium was born from a simple belief: everyone has the potential
+                  to achieve extraordinary things when they have access to the right
                   knowledge, tools, and inspiration.
                 </p>
                 <p>
-                  What started as a personal blog sharing insights about technology 
-                  and personal development has evolved into a comprehensive platform 
+                  What started as a personal blog sharing insights about technology
+                  and personal development has evolved into a comprehensive platform
                   that serves thousands of readers worldwide.
                 </p>
                 <p>
-                  Today, we're proud to feature content from expert writers, industry 
-                  leaders, and passionate individuals who share our commitment to 
+                  Today, we're proud to feature content from expert writers, industry
+                  leaders, and passionate individuals who share our commitment to
                   continuous learning and growth.
                 </p>
               </div>
             </div>
-            
+
             <div className="about-stats-card">
               <div className="about-stats-grid">
                 <div>
@@ -133,31 +133,31 @@ const About = () => {
             <div className="about-value-item quality">
               <h3 className="about-value-title">Quality First</h3>
               <p className="about-value-text">
-                We believe in delivering high-quality, well-researched content that 
+                We believe in delivering high-quality, well-researched content that
                 provides real value to our readers.
               </p>
             </div>
-            
+
             <div className="about-value-item authenticity">
               <h3 className="about-value-title">Authenticity</h3>
               <p className="about-value-text">
-                Our content comes from real experiences, genuine insights, and 
+                Our content comes from real experiences, genuine insights, and
                 authentic voices from our community.
               </p>
             </div>
-            
+
             <div className="about-value-item inclusivity">
               <h3 className="about-value-title">Inclusivity</h3>
               <p className="about-value-text">
-                We welcome diverse perspectives and strive to create content that 
+                We welcome diverse perspectives and strive to create content that
                 resonates with people from all walks of life.
               </p>
             </div>
-            
+
             <div className="about-value-item growth">
               <h3 className="about-value-title">Growth Mindset</h3>
               <p className="about-value-text">
-                We're committed to continuous improvement, both in our content 
+                We're committed to continuous improvement, both in our content
                 and in supporting our readers' growth journeys.
               </p>
             </div>
@@ -173,7 +173,7 @@ const About = () => {
               Meet Our Team
             </h2>
             <p className="about-section-subtitle">
-              The passionate individuals behind PeakSelf
+              The passionate individuals behind Peakium
             </p>
           </div>
 
@@ -188,7 +188,7 @@ const About = () => {
                 Technology enthusiast with 8+ years in web development and content strategy.
               </p>
             </div>
-            
+
             <div className="about-team-member">
               <div className="about-team-avatar michael">
                 <span>MC</span>
@@ -199,7 +199,7 @@ const About = () => {
                 Personal development expert and certified life coach with a passion for growth.
               </p>
             </div>
-            
+
             <div className="about-team-member">
               <div className="about-team-avatar alex">
                 <span>AR</span>

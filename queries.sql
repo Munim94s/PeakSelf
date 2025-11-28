@@ -1,15 +1,15 @@
 -- ============================================================================
--- PeakSelf Database Schema
+-- Peakium Database Schema
 -- ============================================================================
 -- Target: PostgreSQL 12+
 -- Purpose: Complete database initialization for a fresh deployment
 -- 
 -- This script creates all tables, indexes, triggers, views, and initial data
--- needed for the PeakSelf analytics platform.
+-- needed for the Peakium analytics platform.
 --
 -- USAGE:
---   createdb peakself
---   psql peakself < queries.sql
+--   createdb peakium
+--   psql peakium < queries.sql
 --
 -- FEATURES:
 --   - Email verification system
@@ -575,7 +575,7 @@ DO $$
 BEGIN
   RAISE NOTICE '';
   RAISE NOTICE '============================================================================';
-  RAISE NOTICE 'PeakSelf Database Initialization Complete!';
+  RAISE NOTICE 'Peakium Database Initialization Complete!';
   RAISE NOTICE '============================================================================';
   RAISE NOTICE '';
   RAISE NOTICE 'Database Schema Summary:';

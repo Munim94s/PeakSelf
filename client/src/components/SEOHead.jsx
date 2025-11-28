@@ -61,7 +61,7 @@ const SEOHead = ({
             {description && <meta property="og:description" content={description} />}
             <meta property="og:url" content={canonicalUrl} />
             <meta property="og:image" content={ogImage} />
-            <meta property="og:site_name" content="PeakSelf" />
+            <meta property="og:site_name" content="Peakium" />
 
             {/* Article-specific Open Graph tags */}
             {type === 'article' && article && (

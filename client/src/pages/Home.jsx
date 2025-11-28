@@ -37,7 +37,7 @@ const Home = () => {
   return (
     <div className="home-container">
       <SEOHead
-        title="PeakSelf - Analytics Platform"
+        title="Peakium - Analytics Platform"
         description="Modern, self-hosted analytics and blog platform built with React, Express, and PostgreSQL. Complete control over your data with professional insights for career advancement and technology mastery."
         url="/"
         type="website"
@@ -52,7 +52,7 @@ const Home = () => {
             <div className="text-center mb-16">
               {/* Main Title */}
               <h1 className="hero-title">
-                PEAKSELF
+                PEAKIUM
               </h1>
 
               {/* Subtitle */}

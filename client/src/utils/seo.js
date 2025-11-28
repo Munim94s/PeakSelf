@@ -1,10 +1,10 @@
 /**
- * SEO utility functions for PeakSelf
+ * SEO utility functions for Peakium
  * Provides helpers for generating meta tags, structured data, and canonical URLs
  */
 
 // Site configuration
-const SITE_NAME = 'PeakSelf';
+const SITE_NAME = 'Peakium';
 const SITE_TAGLINE = 'Analytics Platform';
 const SITE_DESCRIPTION = 'Modern, self-hosted analytics and blog platform built with React, Express, and PostgreSQL. Complete control over your data.';
 const DEFAULT_OG_IMAGE = '/og-image.png'; // You'll need to add this image to public folder
@@ -97,7 +97,7 @@ export function generateBlogPostSchema(post) {
         dateModified: post.updated_at || post.published_at || post.created_at,
         author: {
             '@type': 'Person',
-            name: post.author || 'PeakSelf Team',
+            name: post.author || 'Peakium Team',
         },
         publisher: {
             '@type': 'Organization',
@@ -130,8 +130,8 @@ export function generateOrganizationSchema() {
         description: SITE_DESCRIPTION,
         sameAs: [
             // Add your social media URLs here
-            // 'https://twitter.com/peakself',
-            // 'https://github.com/peakself',
+            // 'https://twitter.com/Peakium',
+            // 'https://github.com/Peakium',
         ],
     };
 }
@@ -179,3 +179,4 @@ export function extractExcerpt(html, maxLength = 160) {
 
     return truncateDescription(cleaned, maxLength);
 }
+

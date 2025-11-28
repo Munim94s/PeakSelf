@@ -2,7 +2,7 @@ import React from 'react';
 
 /**
  * BrandedLoadingScreen component
- * Full-screen loading with PEAKSELF branding and spinner
+ * Full-screen loading with PEAKIUM branding and spinner
  * Used for admin page lazy loading
  */
 const BrandedLoadingScreen = () => {
@@ -22,16 +22,16 @@ const BrandedLoadingScreen = () => {
       zIndex: 9999,
       overflow: 'hidden'
     }}>
-      {/* PeakSelf Logo */}
+      {/* Peakium Logo */}
       <div style={{
         fontSize: '3rem',
         fontWeight: 900,
         color: '#fff',
         letterSpacing: '-0.02em'
       }}>
-        PEAKSELF
+        PEAKIUM
       </div>
-      
+
       {/* Spinner */}
       <div style={{
         position: 'relative',

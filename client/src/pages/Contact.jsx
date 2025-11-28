@@ -50,7 +50,7 @@ const Contact = () => {
               <h2 className="contact-info-title">
                 Let's Connect
               </h2>
-              
+
               <div className="contact-info-list">
                 <div className="contact-info-item">
                   <div className="contact-info-icon email">
@@ -58,11 +58,11 @@ const Contact = () => {
                   </div>
                   <div className="contact-info-details">
                     <h3>Email</h3>
-                    <p>hello@peakself.com</p>
-                    <p>support@peakself.com</p>
+                    <p>hello@peakium.com</p>
+                    <p>support@peakium.com</p>
                   </div>
                 </div>
-                
+
                 <div className="contact-info-item">
                   <div className="contact-info-icon phone">
                     <Phone />
@@ -73,7 +73,7 @@ const Contact = () => {
                     <p>Mon-Fri 9AM-6PM EST</p>
                   </div>
                 </div>
-                
+
                 <div className="contact-info-item">
                   <div className="contact-info-icon location">
                     <MapPin />
@@ -116,7 +116,7 @@ const Contact = () => {
               <h2 className="contact-form-title">
                 Send us a Message
               </h2>
-              
+
               <form onSubmit={handleSubmit} className="contact-form">
                 <div className="contact-form-row">
                   <div className="contact-form-group">
@@ -134,7 +134,7 @@ const Contact = () => {
                       placeholder="Your full name"
                     />
                   </div>
-                  
+
                   <div className="contact-form-group">
                     <label htmlFor="email" className="contact-form-label">
                       Email *
@@ -151,7 +151,7 @@ const Contact = () => {
                     />
                   </div>
                 </div>
-                
+
                 <div className="contact-form-group">
                   <label htmlFor="subject" className="contact-form-label">
                     Subject *
@@ -167,7 +167,7 @@ const Contact = () => {
                     placeholder="What's this about?"
                   />
                 </div>
-                
+
                 <div className="contact-form-group">
                   <label htmlFor="message" className="contact-form-label">
                     Message *
@@ -183,7 +183,7 @@ const Contact = () => {
                     placeholder="Tell us more about your inquiry..."
                   />
                 </div>
-                
+
                 <button
                   type="submit"
                   className="contact-form-submit"
@@ -215,28 +215,28 @@ const Contact = () => {
                 How often do you publish new articles?
               </h3>
               <p className="contact-faq-answer">
-                We publish new articles weekly, typically on Tuesdays and Fridays. 
+                We publish new articles weekly, typically on Tuesdays and Fridays.
                 You can subscribe to our newsletter to be notified of new content.
               </p>
             </div>
-            
+
             <div className="contact-faq-item">
               <h3 className="contact-faq-question">
-                Can I contribute to PeakSelf?
+                Can I contribute to Peakium?
               </h3>
               <p className="contact-faq-answer">
-                Absolutely! We welcome guest contributions from writers who share our 
-                values and can provide valuable insights to our readers. Contact us 
+                Absolutely! We welcome guest contributions from writers who share our
+                values and can provide valuable insights to our readers. Contact us
                 with your pitch.
               </p>
             </div>
-            
+
             <div className="contact-faq-item">
               <h3 className="contact-faq-question">
                 Do you offer consulting or speaking services?
               </h3>
               <p className="contact-faq-answer">
-                Yes, our team members are available for consulting projects and speaking 
+                Yes, our team members are available for consulting projects and speaking
                 engagements. Reach out to discuss your specific needs and availability.
               </p>
             </div>

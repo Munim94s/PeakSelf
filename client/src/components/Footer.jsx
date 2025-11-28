@@ -11,11 +11,11 @@ const Footer = () => {
           {/* Brand Section */}
           <div className="footer-brand">
             <Link to="/" className="footer-logo">
-              <img src="/logo-p.svg" alt="PeakSelf Logo" className="footer-logo-icon" />
-              <span className="footer-brand-name">PEAKSELF</span>
+              <img src="/logo-p.svg" alt="Peakium Logo" className="footer-logo-icon" />
+              <span className="footer-brand-name">PEAKIUM</span>
             </Link>
             <p className="footer-description">
-              A professional blog platform dedicated to personal growth, technology insights, 
+              A professional blog platform dedicated to personal growth, technology insights,
               and sharing knowledge that helps you reach your peak potential.
             </p>
             <div className="footer-social">
@@ -75,7 +75,7 @@ const Footer = () => {
 
         <div className="footer-divider">
           <p className="footer-copyright">
-            © 2024 PeakSelf. All rights reserved. Built with React.
+            © 2024 Peakium. All rights reserved. Built with React.
           </p>
         </div>
       </div>

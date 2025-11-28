@@ -6,10 +6,10 @@ export default function AdminSettings() {
   const [palette, setPalette] = useState('neutral');
 
   const palettes = useMemo(() => ([
-    { key: 'neutral', name: 'Neutral', tones: ['#111','#333','#888','#e0e0e0','#fff'] },
-    { key: 'dim', name: 'Dim', tones: ['#111','#222','#555','#cfcfcf','#f6f6f6'] },
-    { key: 'contrast', name: 'High Contrast', tones: ['#000','#111','#666','#dddddd','#ffffff'] },
-    { key: 'mono', name: 'Mono', tones: ['#111','#444','#777','#bbbbbb','#f2f2f2'] }
+    { key: 'neutral', name: 'Neutral', tones: ['#111', '#333', '#888', '#e0e0e0', '#fff'] },
+    { key: 'dim', name: 'Dim', tones: ['#111', '#222', '#555', '#cfcfcf', '#f6f6f6'] },
+    { key: 'contrast', name: 'High Contrast', tones: ['#000', '#111', '#666', '#dddddd', '#ffffff'] },
+    { key: 'mono', name: 'Mono', tones: ['#111', '#444', '#777', '#bbbbbb', '#f2f2f2'] }
   ]), []);
 
   const tabs = [
@@ -54,7 +54,7 @@ export default function AdminSettings() {
             </div>
             <div style={{ display: 'grid', gap: '1.25rem', maxWidth: 600 }}>
               <Field label="Site Title">
-                <input type="text" placeholder="PeakSelf" style={inputStyle} />
+                <input type="text" placeholder="Peakium" style={inputStyle} />
               </Field>
               <Field label="Support Email">
                 <input type="email" placeholder="support@example.com" style={inputStyle} />
@@ -170,7 +170,7 @@ export default function AdminSettings() {
             </div>
             <div style={{ display: 'grid', gap: '1.25rem', maxWidth: 600 }}>
               <Field label="From Name">
-                <input type="text" placeholder="PeakSelf" style={inputStyle} />
+                <input type="text" placeholder="Peakium" style={inputStyle} />
               </Field>
               <Field label="From Address">
                 <input type="email" placeholder="no-reply@example.com" style={inputStyle} />

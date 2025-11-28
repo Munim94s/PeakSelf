@@ -1,0 +1,24 @@
+(node:14788) ExperimentalWarning: CommonJS module C:\Program Files\nodejs\node_modules\npm\node_modules\debug\src\node.js is loading ES Module C:\Program Files\nodejs\node_modules\npm\node_modules\supports-color\index.js using require().
+Support for loading ES Module in require() is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+npm error code ERESOLVE
+npm error ERESOLVE unable to resolve dependency tree
+npm error
+npm error While resolving: peakium@0.0.0
+npm error Found: react@19.2.0
+npm error node_modules/react
+npm error   react@"^19.1.1" from the root project
+npm error
+npm error Could not resolve dependency:
+npm error peer react@"^16.6.0 || ^17.0.0 || ^18.0.0" from react-helmet-async@2.0.5
+npm error node_modules/react-helmet-async
+npm error   react-helmet-async@"^2.0.5" from the root project
+npm error
+npm error Fix the upstream dependency conflict, or retry
+npm error this command with --force or --legacy-peer-deps
+npm error to accept an incorrect (and potentially broken) dependency resolution.
+npm error
+npm error
+npm error For a full report see:
+npm error C:\Users\Admin\AppData\Local\npm-cache\_logs\2025-11-28T18_43_20_998Z-eresolve-report.txt
+npm error A complete log of this run can be found in: C:\Users\Admin\AppData\Local\npm-cache\_logs\2025-11-28T18_43_20_998Z-debug-0.log

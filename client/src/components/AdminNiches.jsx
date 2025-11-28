@@ -14,11 +14,11 @@ export default function AdminNiches() {
   const [editingNiche, setEditingNiche] = useState(null);
   const [activeTab, setActiveTab] = useState('details');
   const [availablePosts, setAvailablePosts] = useState([]);
-  const [formData, setFormData] = useState({ 
-    name: '', 
+  const [formData, setFormData] = useState({
+    name: '',
     display_name: '',
-    logo_url: '', 
-    logo_text: 'Peakself',
+    logo_url: '',
+    logo_text: 'Peakium',
     is_active: true,
     display_order: 0,
     show_on_route: true,
@@ -44,11 +44,11 @@ export default function AdminNiches() {
   const handleOpenModal = async (niche = null) => {
     if (niche) {
       setEditingNiche(niche);
-      setFormData({ 
+      setFormData({
         name: niche.name,
         display_name: niche.display_name || '',
-        logo_url: niche.logo_url || '', 
-        logo_text: niche.logo_text || 'Peakself',
+        logo_url: niche.logo_url || '',
+        logo_text: niche.logo_text || 'Peakium',
         is_active: niche.is_active,
         display_order: niche.display_order ?? 0,
         show_on_route: niche.show_on_route ?? true,
@@ -65,11 +65,11 @@ export default function AdminNiches() {
       }
     } else {
       setEditingNiche(null);
-      setFormData({ 
+      setFormData({
         name: '',
         display_name: '',
-        logo_url: '', 
-        logo_text: 'Peakself',
+        logo_url: '',
+        logo_text: 'Peakium',
         is_active: true,
         display_order: 0,
         show_on_route: true,
@@ -86,11 +86,11 @@ export default function AdminNiches() {
     setEditingNiche(null);
     setActiveTab('details');
     setAvailablePosts([]);
-    setFormData({ 
+    setFormData({
       name: '',
       display_name: '',
-      logo_url: '', 
-      logo_text: 'Peakself',
+      logo_url: '',
+      logo_text: 'Peakium',
       is_active: true,
       display_order: 0,
       show_on_route: true,
@@ -100,7 +100,7 @@ export default function AdminNiches() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     try {
       if (editingNiche) {
         const { data } = await apiClient.put(endpoints.niches.update(editingNiche.id), formData);
@@ -133,7 +133,7 @@ export default function AdminNiches() {
   };
 
   if (loading) return <SkeletonTable rows={5} />;
-  if (error) return <div style={{padding: '2rem', color: '#b91c1c'}}>Error: {error}</div>;
+  if (error) return <div style={{ padding: '2rem', color: '#b91c1c' }}>Error: {error}</div>;
 
   return (
     <div className="admin-tags">
@@ -152,7 +152,7 @@ export default function AdminNiches() {
               <div className="tag-details">
                 <div className="tag-name">
                   {niche.name}
-                  {!niche.is_active && <span style={{color: '#9ca3af', fontSize: '0.75rem', marginLeft: '0.5rem'}}>(Inactive)</span>}
+                  {!niche.is_active && <span style={{ color: '#9ca3af', fontSize: '0.75rem', marginLeft: '0.5rem' }}>(Inactive)</span>}
                 </div>
                 <div className="tag-meta">
                   Order: {niche.display_order ?? 0} • {niche.post_count} post{niche.post_count !== '1' ? 's' : ''}
@@ -162,15 +162,15 @@ export default function AdminNiches() {
               </div>
             </div>
             <div className="tag-actions">
-              <button 
-                className="btn-icon" 
+              <button
+                className="btn-icon"
                 onClick={() => handleOpenModal(niche)}
                 title="Edit"
               >
                 <Edit2 size={16} />
               </button>
-              <button 
-                className="btn-icon danger" 
+              <button
+                className="btn-icon danger"
                 onClick={() => handleDelete(niche)}
                 title="Delete"
               >
@@ -196,7 +196,7 @@ export default function AdminNiches() {
                 <X size={20} />
               </button>
             </div>
-            
+
             {/* Tabs */}
             {editingNiche && (
               <div style={{
@@ -267,115 +267,115 @@ export default function AdminNiches() {
                 </button>
               </div>
             )}
-            
+
             <form onSubmit={handleSubmit}>
               {activeTab === 'details' && (
                 <>
-              <div className="form-group">
-                <label htmlFor="niche-name">Niche Name</label>
-                <input
-                  id="niche-name"
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g., Tech, Dev, Cars"
-                  required
-                  autoFocus
-                />
-                <small style={{color: '#6b7280', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block'}}>
-                  Internal name for the niche (used in URLs)
-                </small>
-              </div>
-              <div className="form-group">
-                <label htmlFor="display-name">Display Name (Optional)</label>
-                <input
-                  id="display-name"
-                  type="text"
-                  value={formData.display_name}
-                  onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
-                  placeholder="e.g., Technology, Development, Automotive"
-                />
-                <small style={{color: '#6b7280', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block'}}>
-                  Name shown in frontend text (e.g., "Get connected with Technology"). Defaults to niche name if empty.
-                </small>
-              </div>
-              <div className="form-group">
-                <label htmlFor="logo-url">Logo URL (Optional)</label>
-                <input
-                  id="logo-url"
-                  type="text"
-                  value={formData.logo_url}
-                  onChange={(e) => setFormData({ ...formData, logo_url: e.target.value })}
-                  placeholder="https://example.com/logo.png"
-                />
-                <small style={{color: '#6b7280', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block'}}>
-                  URL for the black P sign or custom logo
-                </small>
-              </div>
-              <div className="form-group">
-                <label htmlFor="logo-text">Logo Text</label>
-                <input
-                  id="logo-text"
-                  type="text"
-                  value={formData.logo_text}
-                  onChange={(e) => setFormData({ ...formData, logo_text: e.target.value })}
-                  placeholder="Peakself"
-                />
-                <small style={{color: '#6b7280', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block'}}>
-                  Text to display next to the logo (e.g., "Peakself", "Peakself Tech")
-                </small>
-              </div>
-              <div className="form-group">
-                <label htmlFor="display-order">Display Order</label>
-                <input
-                  id="display-order"
-                  type="number"
-                  min="0"
-                  value={formData.display_order}
-                  onChange={(e) => setFormData({ ...formData, display_order: parseInt(e.target.value) || 0 })}
-                  placeholder="0"
-                />
-                <small style={{color: '#6b7280', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block'}}>
-                  Lower numbers appear first on the route site (0, 1, 2, etc.)
-                </small>
-              </div>
-              <div className="form-group">
-                <label style={{display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer'}}>
-                  <input
-                    type="checkbox"
-                    checked={formData.is_active}
-                    onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                  />
-                  Active
-                </label>
-                <small style={{color: '#6b7280', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block'}}>
-                  Only active niches are shown on the website
-                </small>
-              </div>
-              <div className="form-group">
-                <label style={{display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer'}}>
-                  <input
-                    type="checkbox"
-                    checked={formData.show_on_route}
-                    onChange={(e) => setFormData({ ...formData, show_on_route: e.target.checked })}
-                  />
-                  Show on Homepage & Header
-                </label>
-                <small style={{color: '#6b7280', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block'}}>
-                  Display this niche on the homepage hero section and in the header navigation menu. Niche will still be accessible via direct URL even when unchecked.
-                </small>
-              </div>
+                  <div className="form-group">
+                    <label htmlFor="niche-name">Niche Name</label>
+                    <input
+                      id="niche-name"
+                      type="text"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="e.g., Tech, Dev, Cars"
+                      required
+                      autoFocus
+                    />
+                    <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
+                      Internal name for the niche (used in URLs)
+                    </small>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="display-name">Display Name (Optional)</label>
+                    <input
+                      id="display-name"
+                      type="text"
+                      value={formData.display_name}
+                      onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
+                      placeholder="e.g., Technology, Development, Automotive"
+                    />
+                    <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
+                      Name shown in frontend text (e.g., "Get connected with Technology"). Defaults to niche name if empty.
+                    </small>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="logo-url">Logo URL (Optional)</label>
+                    <input
+                      id="logo-url"
+                      type="text"
+                      value={formData.logo_url}
+                      onChange={(e) => setFormData({ ...formData, logo_url: e.target.value })}
+                      placeholder="https://example.com/logo.png"
+                    />
+                    <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
+                      URL for the black P sign or custom logo
+                    </small>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="logo-text">Logo Text</label>
+                    <input
+                      id="logo-text"
+                      type="text"
+                      value={formData.logo_text}
+                      onChange={(e) => setFormData({ ...formData, logo_text: e.target.value })}
+                      placeholder="Peakium"
+                    />
+                    <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
+                      Text to display next to the logo (e.g., "Peakium", "Peakium Tech")
+                    </small>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="display-order">Display Order</label>
+                    <input
+                      id="display-order"
+                      type="number"
+                      min="0"
+                      value={formData.display_order}
+                      onChange={(e) => setFormData({ ...formData, display_order: parseInt(e.target.value) || 0 })}
+                      placeholder="0"
+                    />
+                    <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
+                      Lower numbers appear first on the route site (0, 1, 2, etc.)
+                    </small>
+                  </div>
+                  <div className="form-group">
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={formData.is_active}
+                        onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                      />
+                      Active
+                    </label>
+                    <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
+                      Only active niches are shown on the website
+                    </small>
+                  </div>
+                  <div className="form-group">
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={formData.show_on_route}
+                        onChange={(e) => setFormData({ ...formData, show_on_route: e.target.checked })}
+                      />
+                      Show on Homepage & Header
+                    </label>
+                    <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
+                      Display this niche on the homepage hero section and in the header navigation menu. Niche will still be accessible via direct URL even when unchecked.
+                    </small>
+                  </div>
                 </>
               )}
-              
+
               {activeTab === 'hero' && editingNiche && (
-                <HeroSectionsTab 
+                <HeroSectionsTab
                   availablePosts={availablePosts}
                   heroSections={formData.hero_sections}
                   onChange={(sections) => setFormData({ ...formData, hero_sections: sections })}
                 />
               )}
-              
+
               <div className="modal-actions">
                 <button type="button" className="btn-secondary" onClick={handleCloseModal}>
                   Cancel
@@ -395,7 +395,7 @@ export default function AdminNiches() {
 function HeroSectionsTab({ availablePosts, heroSections, onChange }) {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [expandedSections, setExpandedSections] = React.useState({});
-  
+
   const sections = [
     { key: 'latest', label: 'Latest', count: 6 },
     { key: 'trending', label: 'Trending', count: 6 },
@@ -410,12 +410,12 @@ function HeroSectionsTab({ availablePosts, heroSections, onChange }) {
     { key: 'practices', label: 'Best Practices', count: 6 },
     { key: 'more', label: 'More', count: 6 }
   ];
-  
+
   // Filter posts based on search query
   const filteredPosts = React.useMemo(() => {
     if (!searchQuery.trim()) return availablePosts;
     const query = searchQuery.toLowerCase();
-    return availablePosts.filter(post => 
+    return availablePosts.filter(post =>
       post.title.toLowerCase().includes(query)
     );
   }, [availablePosts, searchQuery]);
@@ -423,7 +423,7 @@ function HeroSectionsTab({ availablePosts, heroSections, onChange }) {
   const handleTogglePost = (sectionKey, postId) => {
     const currentSection = heroSections[sectionKey] || [];
     const isSelected = currentSection.includes(postId);
-    
+
     let newSection;
     if (isSelected) {
       newSection = currentSection.filter(id => id !== postId);
@@ -436,7 +436,7 @@ function HeroSectionsTab({ availablePosts, heroSections, onChange }) {
         newSection = [...currentSection, postId];
       }
     }
-    
+
     onChange({ ...heroSections, [sectionKey]: newSection });
   };
 
@@ -455,7 +455,7 @@ function HeroSectionsTab({ availablePosts, heroSections, onChange }) {
         <p style={{ marginBottom: '1rem', color: '#6b7280', fontSize: '0.9rem' }}>
           Select which posts appear in each section on the niche page. Each section can display up to {sections[0].count} posts.
         </p>
-        
+
         {/* Search Input */}
         <div style={{ position: 'sticky', top: 0, background: 'white', zIndex: 10, paddingBottom: '1rem' }}>
           <input
@@ -497,10 +497,10 @@ function HeroSectionsTab({ availablePosts, heroSections, onChange }) {
           )}
         </div>
       </div>
-      
+
       {sections.map(section => {
         const selectedPosts = heroSections[section.key] || [];
-        
+
         return (
           <div key={section.key} style={{
             marginBottom: '2rem',
@@ -521,7 +521,7 @@ function HeroSectionsTab({ availablePosts, heroSections, onChange }) {
                 {selectedPosts.length}/{section.count} selected
               </span>
             </div>
-            
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               {filteredPosts.length === 0 && searchQuery ? (
                 <div style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>
@@ -529,97 +529,97 @@ function HeroSectionsTab({ availablePosts, heroSections, onChange }) {
                 </div>
               ) : (
                 <>
-                {filteredPosts.slice(0, expandedSections[section.key] ? undefined : 6).map(post => {
-                const isSelected = selectedPosts.includes(post.id);
-                const selectionIndex = selectedPosts.indexOf(post.id);
-                
-                return (
-                  <label
-                    key={post.id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      padding: '0.75rem',
-                      background: isSelected ? '#f0f9ff' : '#fafafa',
-                      border: isSelected ? '2px solid #3b82f6' : '1px solid #e5e7eb',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s'
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => handleTogglePost(section.key, post.id)}
-                      style={{ marginRight: '0.75rem' }}
-                    />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: '500', fontSize: '0.9rem' }}>
-                        {post.title}
-                      </div>
-                      <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                        {new Date(post.published_at || post.created_at).toLocaleDateString()}
-                      </div>
-                    </div>
-                    {isSelected && (
-                      <div style={{
-                        background: '#3b82f6',
-                        color: 'white',
-                        padding: '0.25rem 0.5rem',
-                        borderRadius: '4px',
-                        fontSize: '0.75rem',
-                        fontWeight: '600'
-                      }}>
-                        #{selectionIndex + 1}
-                      </div>
-                    )}
-                  </label>
-                );
-              })}
-              
-              {filteredPosts.length > 6 && !expandedSections[section.key] && !searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setExpandedSections({ ...expandedSections, [section.key]: true })}
-                  style={{
-                    marginTop: '0.5rem',
-                    padding: '0.75rem',
-                    background: '#f3f4f6',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '6px',
-                    color: '#3b82f6',
-                    fontWeight: '500',
-                    cursor: 'pointer',
-                    fontSize: '0.9rem',
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseOver={(e) => e.target.style.background = '#e5e7eb'}
-                  onMouseOut={(e) => e.target.style.background = '#f3f4f6'}
-                >
-                  Show {filteredPosts.length - 6} more posts
-                </button>
-              )}
-              
-              {expandedSections[section.key] && (
-                <button
-                  type="button"
-                  onClick={() => setExpandedSections({ ...expandedSections, [section.key]: false })}
-                  style={{
-                    marginTop: '0.5rem',
-                    padding: '0.75rem',
-                    background: '#f3f4f6',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '6px',
-                    color: '#6b7280',
-                    fontWeight: '500',
-                    cursor: 'pointer',
-                    fontSize: '0.9rem'
-                  }}
-                >
-                  Show less
-                </button>
-              )}
-              </>
+                  {filteredPosts.slice(0, expandedSections[section.key] ? undefined : 6).map(post => {
+                    const isSelected = selectedPosts.includes(post.id);
+                    const selectionIndex = selectedPosts.indexOf(post.id);
+
+                    return (
+                      <label
+                        key={post.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: '0.75rem',
+                          background: isSelected ? '#f0f9ff' : '#fafafa',
+                          border: isSelected ? '2px solid #3b82f6' : '1px solid #e5e7eb',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleTogglePost(section.key, post.id)}
+                          style={{ marginRight: '0.75rem' }}
+                        />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: '500', fontSize: '0.9rem' }}>
+                            {post.title}
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                            {new Date(post.published_at || post.created_at).toLocaleDateString()}
+                          </div>
+                        </div>
+                        {isSelected && (
+                          <div style={{
+                            background: '#3b82f6',
+                            color: 'white',
+                            padding: '0.25rem 0.5rem',
+                            borderRadius: '4px',
+                            fontSize: '0.75rem',
+                            fontWeight: '600'
+                          }}>
+                            #{selectionIndex + 1}
+                          </div>
+                        )}
+                      </label>
+                    );
+                  })}
+
+                  {filteredPosts.length > 6 && !expandedSections[section.key] && !searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setExpandedSections({ ...expandedSections, [section.key]: true })}
+                      style={{
+                        marginTop: '0.5rem',
+                        padding: '0.75rem',
+                        background: '#f3f4f6',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '6px',
+                        color: '#3b82f6',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        fontSize: '0.9rem',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseOver={(e) => e.target.style.background = '#e5e7eb'}
+                      onMouseOut={(e) => e.target.style.background = '#f3f4f6'}
+                    >
+                      Show {filteredPosts.length - 6} more posts
+                    </button>
+                  )}
+
+                  {expandedSections[section.key] && (
+                    <button
+                      type="button"
+                      onClick={() => setExpandedSections({ ...expandedSections, [section.key]: false })}
+                      style={{
+                        marginTop: '0.5rem',
+                        padding: '0.75rem',
+                        background: '#f3f4f6',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '6px',
+                        color: '#6b7280',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        fontSize: '0.9rem'
+                      }}
+                    >
+                      Show less
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </div>

@@ -32,7 +32,7 @@ const Header = () => {
   // Fetch on mount
   useEffect(() => {
     fetchMe();
-    
+
     // Fetch niches
     const fetchNiches = async () => {
       try {
@@ -159,10 +159,11 @@ const Header = () => {
             {currentNiche?.logo_url ? (
               <img src={currentNiche.logo_url} alt={currentNiche.name} className="header-logo-icon" />
             ) : (
-              <img src="/logo-p.svg" alt="PeakSelf Logo" className="header-logo-icon" />
+              <img src="/logo-p.svg" alt="Peakium Logo" className="header-logo-icon" />
             )}
-            <span className="header-brand-name">
-              {currentNiche ? (currentNiche.logo_text || currentNiche.name.toUpperCase()) : 'PEAKSELF'}
+            <span className="header-brand-name" style={{ marginLeft: '17px' }}>
+              {/* Show niche-specific branding if available */}
+              {currentNiche ? (currentNiche.logo_text || currentNiche.name.toUpperCase()) : 'PEAKIUM'}
             </span>
           </Link>
 
@@ -175,7 +176,7 @@ const Header = () => {
               Blog
             </Link>
             {niches.length > 0 && (
-              <div 
+              <div
                 className="header-niches-dropdown"
                 onMouseEnter={() => {
                   // Clear any pending timers
@@ -202,15 +203,15 @@ const Header = () => {
                   }, 750);
                 }}
               >
-                <button className="header-nav-link" style={{background: 'transparent', border: 'none', cursor: 'pointer'}}>
+                <button className="header-nav-link" style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}>
                   Niches ▾
                 </button>
                 {nichesMenuOpen && (
                   <div className={`niches-dropdown-menu ${nichesMenuClosing ? 'closing' : ''}`}>
                     {niches.map(niche => (
-                      <Link 
-                        key={niche.id} 
-                        to={`/${niche.slug}`} 
+                      <Link
+                        key={niche.id}
+                        to={`/${niche.slug}`}
                         className="niches-dropdown-item"
                         onClick={() => {
                           // Immediately close dropdown when clicked
@@ -286,7 +287,7 @@ const Header = () => {
             {!loading && !user && (
               <Link to="/register" className="header-nav-link">Sign up</Link>
             )}
-            
+
             {/* Mobile menu button */}
             <button
               onClick={toggleMenu}
@@ -299,8 +300,8 @@ const Header = () => {
 
         {/* Mobile Navigation Backdrop */}
         {isMenuOpen && (
-          <div 
-            className="mobile-nav-backdrop" 
+          <div
+            className="mobile-nav-backdrop"
             onClick={() => setIsMenuOpen(false)}
           />
         )}
@@ -314,13 +315,13 @@ const Header = () => {
                 {currentNiche?.logo_url ? (
                   <img src={currentNiche.logo_url} alt={currentNiche.name} />
                 ) : (
-                  <img src="/logo-p.svg" alt="PeakSelf Logo" />
+                  <img src="/logo-p.svg" alt="Peakium Logo" />
                 )}
                 <span className="mobile-nav-header-title">
-                  {currentNiche ? (currentNiche.logo_text || currentNiche.name.toUpperCase()) : 'PEAKSELF'}
+                  {currentNiche ? (currentNiche.logo_text || currentNiche.name.toUpperCase()) : 'PEAKIUM'}
                 </span>
               </div>
-              <button 
+              <button
                 className="mobile-nav-close-btn"
                 onClick={() => setIsMenuOpen(false)}
                 aria-label="Close menu"
@@ -344,14 +345,14 @@ const Header = () => {
               )}
 
               {/* Navigation Links */}
-              <Link 
-                to={currentNiche ? `/${currentNiche.slug}` : '/'} 
+              <Link
+                to={currentNiche ? `/${currentNiche.slug}` : '/'}
                 className={`header-mobile-nav-link ${location.pathname === (currentNiche ? `/${currentNiche.slug}` : '/') ? 'active' : ''}`}
               >
                 Home
               </Link>
-              <Link 
-                to={currentNiche ? `/${currentNiche.slug}/blog` : '/blog'} 
+              <Link
+                to={currentNiche ? `/${currentNiche.slug}/blog` : '/blog'}
                 className={`header-mobile-nav-link ${location.pathname === (currentNiche ? `/${currentNiche.slug}/blog` : '/blog') ? 'active' : ''}`}
               >
                 Blog
@@ -361,9 +362,9 @@ const Header = () => {
                   <div className="mobile-nav-niches-label">Niches</div>
                   <div className="mobile-nav-niches-grid">
                     {niches.map(niche => (
-                      <Link 
+                      <Link
                         key={niche.id}
-                        to={`/${niche.slug}`} 
+                        to={`/${niche.slug}`}
                         className="mobile-nav-niche-chip"
                       >
                         {niche.name}
@@ -372,14 +373,14 @@ const Header = () => {
                   </div>
                 </>
               )}
-              <Link 
-                to="/about" 
+              <Link
+                to="/about"
                 className={`header-mobile-nav-link ${location.pathname === '/about' ? 'active' : ''}`}
               >
                 About
               </Link>
-              <Link 
-                to="/contact" 
+              <Link
+                to="/contact"
                 className={`header-mobile-nav-link ${location.pathname === '/contact' ? 'active' : ''}`}
               >
                 Contact
@@ -389,14 +390,14 @@ const Header = () => {
               {!user && (
                 <>
                   <div className="mobile-nav-divider" />
-                  <Link 
-                    to="/login" 
+                  <Link
+                    to="/login"
                     className={`header-mobile-nav-link ${location.pathname === '/login' ? 'active' : ''}`}
                   >
                     Login
                   </Link>
-                  <Link 
-                    to="/register" 
+                  <Link
+                    to="/register"
                     className={`header-mobile-nav-link ${location.pathname === '/register' ? 'active' : ''}`}
                   >
                     Sign up
@@ -408,8 +409,8 @@ const Header = () => {
               {user && user.role === 'admin' && (
                 <>
                   <div className="mobile-nav-divider" />
-                  <a 
-                    href="/admin" 
+                  <a
+                    href="/admin"
                     className="header-mobile-nav-link"
                   >
                     Admin Dashboard
@@ -421,8 +422,8 @@ const Header = () => {
               {user && (
                 <>
                   <div className="mobile-nav-divider" />
-                  <button 
-                    onClick={logout} 
+                  <button
+                    onClick={logout}
                     className="header-mobile-nav-link logout-btn"
                   >
                     Logout

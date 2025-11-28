@@ -21,7 +21,7 @@ const GlobalLoadingScreen = () => {
     // Function to check if all current images are loaded
     const checkAllImagesLoaded = () => {
       const images = Array.from(document.images);
-      
+
       // Track new images
       images.forEach(img => {
         if (!trackedImages.has(img)) {
@@ -106,16 +106,16 @@ const GlobalLoadingScreen = () => {
       zIndex: 10000,
       overflow: 'hidden'
     }}>
-      {/* PeakSelf Logo */}
+      {/* Peakium Logo */}
       <div style={{
         fontSize: '3rem',
         fontWeight: 900,
         color: '#fff',
         letterSpacing: '-0.02em'
       }}>
-        PEAKSELF
+        PEAKIUM
       </div>
-      
+
       {/* Spinner using existing animations */}
       <div style={{
         position: 'relative',

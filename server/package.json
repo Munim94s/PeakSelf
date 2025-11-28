@@ -1,7 +1,7 @@
 {
-    "name": "peakself-server",
+    "name": "peakium-server",
     "version": "1.0.0",
-    "description": "Backend API server for PeakSelf analytics platform",
+    "description": "Backend API server for Peakium analytics platform",
     "main": "index.js",
     "type": "module",
     "scripts": {

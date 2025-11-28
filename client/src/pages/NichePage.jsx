@@ -14,14 +14,14 @@ const ArticleSection = ({ sectionKey, title, description, posts, niche, backgrou
   const sectionPosts = sectionIds.length > 0
     ? sectionIds.map(id => posts.find(p => p.id === id)).filter(Boolean)
     : [];
-  
+
   if (sectionPosts.length === 0) return null;
-  
+
   return (
     <section className="recent-section" style={background ? { background } : {}}>
       <div className="container">
         <div className="recent-header">
-          <div style={{textAlign: 'center', marginBottom: '2rem'}}>
+          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
             <h2 className="recent-title">{title}</h2>
             <p className="recent-description">{description}</p>
           </div>
@@ -64,7 +64,7 @@ const NichePage = () => {
     return (
       <div className="blog-container">
         <div className="container">
-          <p style={{textAlign: 'center', padding: '3rem'}}>Loading...</p>
+          <p style={{ textAlign: 'center', padding: '3rem' }}>Loading...</p>
         </div>
       </div>
     );
@@ -74,7 +74,7 @@ const NichePage = () => {
     return (
       <div className="blog-container">
         <div className="container">
-          <p style={{textAlign: 'center', padding: '3rem'}}>Niche not found</p>
+          <p style={{ textAlign: 'center', padding: '3rem' }}>Niche not found</p>
         </div>
       </div>
     );
@@ -86,14 +86,14 @@ const NichePage = () => {
       <section className="hero-section">
         <div className="container">
           <div className="py-20">
-            
+
             {/* Header Content */}
             <div className="text-center mb-16">
               {/* Logo */}
               {niche.logo_url && (
-                <div style={{marginBottom: '1.5rem'}}>
-                  <img 
-                    src={niche.logo_url} 
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <img
+                    src={niche.logo_url}
                     alt={niche.name}
                     style={{
                       width: '80px',
@@ -105,19 +105,19 @@ const NichePage = () => {
                   />
                 </div>
               )}
-              
+
               {/* Main Title */}
               <h1 className="hero-title">
-                {niche.logo_text || 'PEAKSELF'}
+                {niche.logo_text || 'PEAKIUM'}
               </h1>
-              
+
               {/* Subtitle */}
               <p className="hero-subtitle">
                 Deep insights and expert knowledge in {(niche.display_name || niche.name).toLowerCase()}.
                 Elevate your understanding with curated articles and resources.
               </p>
             </div>
-            
+
             {/* Action Buttons */}
             <div className="hero-buttons-container">
               <Link to={`/${niche.slug}/blog`} className="hero-button-primary">
@@ -129,7 +129,7 @@ const NichePage = () => {
                 <ArrowRight className="hero-arrow" />
               </Link>
             </div>
-            
+
             {/* Trust Indicators */}
             <div className="trust-section">
               <div className="text-center mb-12">
@@ -140,7 +140,7 @@ const NichePage = () => {
                   Curated insights for professionals
                 </p>
               </div>
-              
+
               <div className="trust-stats-container">
                 <div className="text-center">
                   <div className="trust-stat-number">{posts.length}+</div>
@@ -166,7 +166,7 @@ const NichePage = () => {
       <section id="articles" className="recent-section">
         <div className="container">
           <div className="recent-header">
-            <div style={{textAlign: 'center', marginBottom: '2rem'}}>
+            <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
               <h2 className="recent-title">
                 Latest in {niche.display_name || niche.name}
               </h2>
@@ -175,7 +175,7 @@ const NichePage = () => {
               </p>
             </div>
           </div>
-          
+
           {posts.length > 0 ? (
             <div className="recent-cards-container">
               {(() => {
@@ -197,11 +197,11 @@ const NichePage = () => {
               borderRadius: '12px',
               border: '2px dashed #e5e5e5'
             }}>
-              <div style={{fontSize: '3rem', marginBottom: '1rem'}}>📝</div>
-              <h3 style={{fontSize: '1.5rem', fontWeight: '700', color: '#111', marginBottom: '0.5rem'}}>
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📝</div>
+              <h3 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#111', marginBottom: '0.5rem' }}>
                 No Articles Yet
               </h3>
-              <p style={{color: '#666', marginBottom: '1.5rem'}}>
+              <p style={{ color: '#666', marginBottom: '1.5rem' }}>
                 We're working on bringing you great content in this niche.
               </p>
               <Link to="/blog" className="recent-button">
@@ -213,7 +213,7 @@ const NichePage = () => {
         </div>
       </section>
 
-      <ArticleSection 
+      <ArticleSection
         sectionKey="trending"
         title={`Trending in ${niche.display_name || niche.name}`}
         description="Most popular articles gaining traction right now"
@@ -222,7 +222,7 @@ const NichePage = () => {
         background="#f8f9fa"
       />
 
-      <ArticleSection 
+      <ArticleSection
         sectionKey="popular"
         title={`Popular in ${niche.display_name || niche.name}`}
         description="Most loved articles by our community"
@@ -230,7 +230,7 @@ const NichePage = () => {
         niche={niche}
       />
 
-      <ArticleSection 
+      <ArticleSection
         sectionKey="recommended"
         title={`Recommended in ${niche.display_name || niche.name}`}
         description="Curated picks to deepen your knowledge"
@@ -239,7 +239,7 @@ const NichePage = () => {
         background="#f8f9fa"
       />
 
-      <ArticleSection 
+      <ArticleSection
         sectionKey="indepth"
         title={`In-Depth ${niche.display_name || niche.name}`}
         description="Deep dives and comprehensive tutorials"
@@ -247,7 +247,7 @@ const NichePage = () => {
         niche={niche}
       />
 
-      <ArticleSection 
+      <ArticleSection
         sectionKey="expert"
         title={`Expert ${niche.display_name || niche.name}`}
         description="Professional insights and advanced perspectives"
@@ -256,7 +256,7 @@ const NichePage = () => {
         background="#f8f9fa"
       />
 
-      <ArticleSection 
+      <ArticleSection
         sectionKey="essential"
         title={`Essential ${niche.display_name || niche.name}`}
         description="Must-read articles every enthusiast should know"
@@ -264,7 +264,7 @@ const NichePage = () => {
         niche={niche}
       />
 
-      <ArticleSection 
+      <ArticleSection
         sectionKey="beginner"
         title={`Beginner's ${niche.display_name || niche.name}`}
         description="Perfect starting point for newcomers"
@@ -273,7 +273,7 @@ const NichePage = () => {
         background="#f8f9fa"
       />
 
-      <ArticleSection 
+      <ArticleSection
         sectionKey="advanced"
         title={`Advanced ${niche.display_name || niche.name}`}
         description="For experienced practitioners and experts"
@@ -281,7 +281,7 @@ const NichePage = () => {
         niche={niche}
       />
 
-      <ArticleSection 
+      <ArticleSection
         sectionKey="tips"
         title={`${niche.display_name || niche.name} Tips & Tricks`}
         description="Practical tips to improve your skills"
@@ -290,7 +290,7 @@ const NichePage = () => {
         background="#f8f9fa"
       />
 
-      <ArticleSection 
+      <ArticleSection
         sectionKey="practices"
         title={`${niche.display_name || niche.name} Best Practices`}
         description="Industry standards and proven methodologies"
@@ -298,7 +298,7 @@ const NichePage = () => {
         niche={niche}
       />
 
-      <ArticleSection 
+      <ArticleSection
         sectionKey="more"
         title={`More ${niche.display_name || niche.name}`}
         description="Additional insights and resources"
@@ -315,14 +315,14 @@ const NichePage = () => {
               Stay Connected
             </span>
           </div>
-          
+
           <h2 className="newsletter-title">
             Get {niche.display_name || niche.name} Updates
           </h2>
           <p className="newsletter-description">
             Subscribe to receive the latest articles and insights in {(niche.display_name || niche.name).toLowerCase()} delivered to your inbox
           </p>
-          
+
           <form className="newsletter-form" onSubmit={async (e) => {
             e.preventDefault();
             const email = e.target.email.value;
@@ -347,7 +347,7 @@ const NichePage = () => {
               <ArrowRight className="newsletter-button-arrow" />
             </button>
           </form>
-          
+
           <p className="newsletter-disclaimer">
             Join thousands of readers. Unsubscribe anytime.
           </p>
